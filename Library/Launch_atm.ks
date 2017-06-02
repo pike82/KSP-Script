@@ -109,8 +109,9 @@ local Staging is import("Staging").
 			Print "Q:"+(SHIP:Q).
 			Print "Max Q:"+(MaxQ).
 			Print "Stage:"+(STAGE:NUMBER).
-			Print "TWR:"+(gl_TWRTarget).
-			Print "TWR Max:"+(sv_maxGeeTarget).
+			Print "TWR:"+(gl_TWR).
+			Print "TWRTarget:"+(gl_TWRTarget).
+			Print "Max G:"+(sv_maxGeeTarget).
 			Print "Throttle Setting:"+(gl_TVALMax).
 			//Switch to 0.
 			//Log (TIME:SECONDS - StartLogtime) +","+ (gravPitch) +","+(AoA) +","+ (dPitch) +","+ (PIDAngle:PTerm) +","+ (PIDAngle:ITerm) +","+ (PIDAngle:DTerm) to AOA.csv.

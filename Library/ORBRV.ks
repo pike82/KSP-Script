@@ -48,16 +48,15 @@ Function ff_CraftTransfer {
 		Log "Set runModeBmk to " + 1 + "." to state.ks. // set the global variable so it skips this and move to the next if statement
 	}//end if
 	If runModeBmk = 1{
-		hf_TransferBurn["time"](target_ves, Target_dist, Max_orbits, int_Warp).
-		Set TransEnd to hf_TransferBurn["time"](target_ves, Target_dist, Max_orbits, int_Warp).
+		Set runModeBmkVar to hf_TransferBurn(target_ves, Target_dist, Max_orbits, int_Warp).
 		/////////Execute the RV targeting node(done outside the helper function to keep the runmode bookmark at this level////////////////
-		Log "Set TransEnd to " + TransEnd + "." to state.ks. // set the variable so it passed to the next if statement
+		Log "runModeBmkVar to " + runModeBmkVar + "." to state.ks. // set the variable so it passed to the next if statement
 		Node_Calc["Node_exec"](int_Warp).
 		Set runModeBmk to 2.
 		Log "Set runModeBmk to " + 2 + "." to state.ks. // set the global variable so it skips this and move to the next if statement
 	}//end if
 	If runModeBmk = 2{
-		hf_TransferRV(target_ves, Target_dist, TransEnd, int_Warp).
+		hf_TransferRV(target_ves, Target_dist, runModeBmkVar, int_Warp).
 		/////////Execute the RV match node (done outside the helper function to keep the runmode bookmark at this level ////////////////
 		Node_Calc["Node_exec"](int_Warp).
 	} //end if
@@ -237,7 +236,7 @@ function hf_TransferBurn {
 		).	//end find intersect
 	}//End Else
 
-Return result.
+Return result["Time"].
 	
 } //end function transferburn
 
@@ -252,7 +251,7 @@ parameter target_vessel, target_distance, result, int_Warp is False.
 	Local result2 is lexicon().
 
 	/////////Get the RV time after execution////////////////
-	Set result1 to hf_separation_orbits(target_vessel, result["time"]()-1000, result +1000, 10,target_distance).
+	Set result1 to hf_separation_orbits(target_vessel, result -1000, result +1000, 10,target_distance).
 	Set result2 to hf_separation_orbits(target_vessel, result1["time"]()-10, result1["time"]() +10, 1,target_distance).
 	Print "Cancel Relative Velocity Seperation Result:" + result2["seperation"]() + " at " + result2["time"]().
 

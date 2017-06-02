@@ -43,7 +43,7 @@ wait until time:seconds >= starttime.
 Print "Burn Start".
 //local t is 0.
 //lock throttle to t.
-until vdot(n:burnvector, v) < 0 {
+until vdot(n:burnvector, v) < 0.01 {
   if ship:maxthrust < 0.1 {
 	stage.
 	wait 0.1.
@@ -58,7 +58,6 @@ until vdot(n:burnvector, v) < 0 {
   Lock Throttle to min(ff_burn_time(n:burnvector:mag), 1).
   wait 0.1.
 }
-//lock throttle to 0.
 Lock Throttle to 0.0.
 Print "Burn Complete".
 unlock steering.

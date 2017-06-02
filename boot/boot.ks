@@ -28,6 +28,7 @@ Print ("==BOOT FILE INITIALISATION==").
 Local bootLast is TIME:SECONDS. // boot last is used to clear the cache to force a mission file recompile
 Global runMode is 0.1.//boot file initialisation of runMode parameter which is used to call/select file functions
 Global runModeBmk is 0.//boot file initialisation of runModeBmk parameter whic is used to call/select helper functions at the file function level only. (do not use this at the helper function level)
+Global runModeBmkVar is 0.//boot file initialisation of runModeBmkvar parameter whic is used to variables at the file function level only. (do not use this at the helper function level)
 Global runModeNode is 0.//boot file initialisation of runModeNode parameter for the execution of a node within the Node_Calcs file level only. (File functions should skip to the correct node execution and this will skip to the active node)
 
 ////////////////////////////////////////////////////////////////////
