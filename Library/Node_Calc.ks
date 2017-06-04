@@ -16,56 +16,51 @@
 //File Functions
 ////////////////////////////////////////////////////////////////
 
-//TODO: Look at including the node execute into the JSON runmode file so the ships knows when it is in the middle of waiting for a node to be executed and then can go back to the same point within the runmode function to continue the runmode from where it left off.
-
 //Note: A shut down engine(inactivated) will not allow this function to work
 function ff_Node_exec { // this function executes the node when ship has one
 // used to determine if the node exceution started and needs to return to this point.
-print "executing node".
-parameter autowarp is 0, Alrm is True, n is nextnode, v is n:burnvector,
-			  starttime is time:seconds + n:eta - ff_burn_time(v:mag/2). // (note: if it doesnt work /2 was outside the bracket)ensure the warp is zero, the next node is selected
-Print "runModeNode: " + runModeNode.
-If runModeNode = 0{
-	If ADDONS:Available("KAC") AND Alrm {		  // if KAC installed	  
-		Set ALM to ADDALARM ("Maneuver", starttime -180, SHIP:NAME ,"").// creates a KAC alarm 3 mins prior to the manevour node
-	}
-}
-Log "Set runModeNode to " + -1 + "." to state.ks. // If reached this state skip straight to the node execution
-Log "Set runModeBmk to " + -1 + "." to state.ks. // If reached this state skip straight to the node_calcs execution
 
-Print "locking Steering".
-lock steering to n:burnvector.
-// Set TVAL to 0.0.
-// Lock Throttle to TVAL.
-if autowarp warpto(starttime - 30).
-Print "Start time: " + starttime.
-wait until time:seconds >= starttime.
-Print "Burn Start".
-//local t is 0.
-//lock throttle to t.
-until vdot(n:burnvector, v) < 0.01 {
-  if ship:maxthrust < 0.1 {
-	stage.
-	wait 0.1.
-	if ship:maxthrust < 0.1 {
-	  for part in ship:parts {
-		for resource in part:resources set resource:enabled to true.
+parameter autowarp is 0, Alrm is True, n is nextnode, v is n:burnvector, starttime is time:seconds + n:eta - ff_burn_time(v:mag/2). 
+	print "executing node".		  
+	If runMode:haskey("ff_Node_exec") = false{
+		If ADDONS:Available("KAC") AND Alrm {		  // if KAC installed	  
+			Set ALM to ADDALARM ("Maneuver", starttime -180, SHIP:NAME ,"").// creates a KAC alarm 3 mins prior to the manevour node
+		}
+	}
+	gf_set_runmode("ff_Node_exec",1).
+
+	Print "locking Steering".
+	lock steering to n:burnvector.
+	// Set TVAL to 0.0.
+	// Lock Throttle to TVAL.
+	if autowarp warpto(starttime - 30).
+	Print "Start time: " + starttime.
+	wait until time:seconds >= starttime.
+	Print "Burn Start".
+	//local t is 0.
+	//lock throttle to t.
+	until vdot(n:burnvector, v) < 0.01 {
+	  if ship:maxthrust < 0.1 {
+		stage.
+		wait 0.1.
+		if ship:maxthrust < 0.1 {
+		  for part in ship:parts {
+			for resource in part:resources set resource:enabled to true.
+		  }
+		  wait 0.1.
+		}
 	  }
+	  //set t to min(Staging["burn_time"](n:burnvector:mag), 1).
+	  Lock Throttle to min(ff_burn_time(n:burnvector:mag), 1).
 	  wait 0.1.
 	}
-  }
-  //set t to min(Staging["burn_time"](n:burnvector:mag), 1).
-  Lock Throttle to min(ff_burn_time(n:burnvector:mag), 1).
-  wait 0.1.
-}
-Lock Throttle to 0.0.
-Print "Burn Complete".
-unlock steering.
-remove nextnode.
-wait 0.
-Set runModeBmk to 0. //reset the global variable
-Set runModeNode to 0. //reset the global variable
-gf_set_runmode(runmode). //reset/clear the state file back to only runmode
+	Lock Throttle to 0.0.
+	Print "Burn Complete".
+	unlock steering.
+	remove nextnode.
+	wait 0.
+
+	gf_remove_runmode("ff_Node_exec").
 
 }/// End Function
 

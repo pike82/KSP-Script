@@ -31,61 +31,62 @@ local Orbit_Calc is import("Orbit_Calc").
 	//TODO: Change to work with negative inclinations.
 	//TODO: Check the dv estimates and if correct used these to create a node instead of the hill climb unless an inclination change is wanted to.
 	Parameter APSIS is "per", EccTarget is 0.005, int_Warp is false, IncTar is 1000.
-		if runModeBmk = 0{
-			If  SHIP:ORBIT:ECCENTRICITY > EccTarget {
-				until Ship:Altitude > (0.95 * ship:body:atm:height) {
-					Wait 0.1. //ensure effectively above the atmosphere before creating the node
+		if runMode:haskey("ff_Node_exec") {
+			Node_Calc["Node_exec"](int_Warp).		
+		} //end runModehaskey if
+		Else If  SHIP:ORBIT:ECCENTRICITY > EccTarget {
+			until Ship:Altitude > (0.95 * ship:body:atm:height) {
+				Wait 0.1. //ensure effectively above the atmosphere before creating the node
+			}
+			Print "Ecentricity:" + SHIP:ORBIT:ECCENTRICITY.
+			If APSIS="per" or obt:transition = "ESCAPE"{
+				set Edv to Orbit_Calc["CircOrbitVel"](ship:orbit:periapsis) - Orbit_Calc["EccOrbitVel"](ship:orbit:periapsis, ship:orbit:semimajoraxis).
+				Print "Seeking Per Circ".
+				Print "Estimated Dv:"+ Edv.
+				If IncTar = 1000{
+					Set n to Node(time:seconds + gl_perETA,0,0,Edv).
+					Add n.
 				}
-				Print "Ecentricity:" + SHIP:ORBIT:ECCENTRICITY.
-				If APSIS="per" or obt:transition = "ESCAPE"{
-					set Edv to Orbit_Calc["CircOrbitVel"](ship:orbit:periapsis) - Orbit_Calc["EccOrbitVel"](ship:orbit:periapsis, ship:orbit:semimajoraxis).
-					Print "Seeking Per Circ".
-					Print "Estimated Dv:"+ Edv.
-					If IncTar = 1000{
-						Set n to Node(time:seconds + gl_perETA,0,0,Edv).
-						Add n.
-					}
-					Else{
-				// use the following in the future to also conduct a change of inclination at the same time
-						Hill_Climb["Seek"](Hill_Climb["freeze"](time:seconds + gl_perETA), Hill_Climb["freeze"](0), 0, Edv, 
-							{ 	parameter mnv. 
-								return -mnv:orbit:eccentricity - (abs(IncTar-mnv:orbit:inclination)/2).
-							}//needs to be changed to deal with negative inclinations
-						).
-					}//end else
-					Node_Calc["Node_exec"](int_Warp).
+				Else{
+			// use the following in the future to also conduct a change of inclination at the same time
+					Hill_Climb["Seek"](Hill_Climb["freeze"](time:seconds + gl_perETA), Hill_Climb["freeze"](0), 0, Edv, 
+						{ 	parameter mnv. 
+							return -mnv:orbit:eccentricity - (abs(IncTar-mnv:orbit:inclination)/2).
+						}//needs to be changed to deal with negative inclinations
+					).
+				}//end else
+				Node_Calc["Node_exec"](int_Warp).
+			}
+			IF APSIS="apo"{
+				set Edv to Orbit_Calc["CircOrbitVel"](ship:orbit:apoapsis) - Orbit_Calc["EccOrbitVel"](ship:orbit:apoapsis, ship:orbit:semimajoraxis).
+				Print "Seeking Apo Circ".
+				Print "Estimated Dv:"+ Edv.
+				If IncTar = 1000{
+					Set n to Node(time:seconds + gl_apoETA,0,0,Edv).
+					Add n.
 				}
-				IF APSIS="apo"{
-					set Edv to Orbit_Calc["CircOrbitVel"](ship:orbit:apoapsis) - Orbit_Calc["EccOrbitVel"](ship:orbit:apoapsis, ship:orbit:semimajoraxis).
-					Print "Seeking Apo Circ".
-					Print "Estimated Dv:"+ Edv.
-					If IncTar = 1000{
-						Set n to Node(time:seconds + gl_apoETA,0,0,Edv).
-						Add n.
-					}
-					Else{
-				// use the following in the future to also conduct a change of inclination at the same time
-						Hill_Climb["Seek"](Hill_Climb["freeze"](time:seconds + gl_apoETA), Hill_Climb["freeze"](0), 0, Edv, 
-							{ 	parameter mnv. 
-								return -mnv:orbit:eccentricity - (abs(IncTar-mnv:orbit:inclination)/2).
-							} //needs to be changed to deal with negative inclinations
-						).
-					}
-					Node_Calc["Node_exec"](int_Warp).
+				Else{
+			// use the following in the future to also conduct a change of inclination at the same time
+					Hill_Climb["Seek"](Hill_Climb["freeze"](time:seconds + gl_apoETA), Hill_Climb["freeze"](0), 0, Edv, 
+						{ 	parameter mnv. 
+							return -mnv:orbit:eccentricity - (abs(IncTar-mnv:orbit:inclination)/2).
+						} //needs to be changed to deal with negative inclinations
+					).
 				}
-				 
-			}//End IF
-		} //end runModeBmk if
-		Else{
-			Node_Calc["Node_exec"](int_Warp).
-		}
+				Node_Calc["Node_exec"](int_Warp).
+			}
+		}//End else IF
+
 	} /// End Function
 
 ///////////////////////////////////////////////////////////////////////////////////		
 	
 	Function ff_adjper {
 	Parameter Target_Perapsis, Target_Tolerance is 500, int_Warp is false, IncTar is 1000.
-		if runModeBmk = 0{
+		if runMode:haskey("ff_Node_exec") {
+			Node_Calc["Node_exec"](int_Warp).		
+		} //end runModehaskey if
+		Else {
 			Print "Adusting Per".
 			set newsma to (ship:orbit:apoapsis+(body:radius*2)+Target_Perapsis)/2.
 			set Edv to Orbit_Calc["EccOrbitVel"](ship:orbit:apoapsis, newsma)- Orbit_Calc["EccOrbitVel"](ship:orbit:apoapsis).
@@ -104,17 +105,17 @@ local Orbit_Calc is import("Orbit_Calc").
 				).
 			}
 			Node_Calc["Node_exec"](int_Warp).
-		} //end runModeBmk if
-		Else{
-			Node_Calc["Node_exec"](int_Warp).
-		}
+		} //end else
 	}	/// End Function
 
 ///////////////////////////////////////////////////////////////////////////////////
 	
 	Function ff_adjapo {
 	Parameter Target_Apoapsis, Target_Tolerance is 500, int_Warp is false, IncTar is 1000.
-		if runModeBmk = 0{
+		if runMode:haskey("ff_Node_exec") {
+			Node_Calc["Node_exec"](int_Warp).		
+		} //end runModehaskey if
+		Else {
 			Print "Adusting Apo".
 			set newsma to (ship:orbit:periapsis+(body:radius*2)+Target_Apoapsis)/2.
 			set Edv to Orbit_Calc["EccOrbitVel"](ship:orbit:periapsis, newsma)- Orbit_Calc["EccOrbitVel"](ship:orbit:periapsis).
@@ -133,10 +134,7 @@ local Orbit_Calc is import("Orbit_Calc").
 				).
 			}
 			Node_Calc["Node_exec"](int_Warp).
-		} //end runModeBmk if
-		Else{
-			Node_Calc["Node_exec"](int_Warp).
-		}
+		} //end else
 	}	/// End Function
 
 ///////////////////////////////////////////////////////////////////////////////////
@@ -145,7 +143,10 @@ local Orbit_Calc is import("Orbit_Calc").
 // This will only get the correct orbit if teh ship is below the target apoapsis at the time of the burn, otherwise the apoapsis cannot be lowered enough.
 	Function ff_adjeccorbit {
 	Parameter Target_Apoapsis, Target_Perapsis, StartingTime is time:seconds + 300, Target_Tolerance is 500, int_Warp is false.
-		if runModeBmk = 0{
+		if runMode:haskey("ff_Node_exec") {
+			Node_Calc["Node_exec"](int_Warp).		
+		} //end runModehaskey if
+		Else {
 			Print "Adusting Eccentirc orbit". 
 			Hill_Climb["Seek"](
 				Hill_Climb["freeze"](StartingTime), 0, Hill_Climb["freeze"](0), 0, { 
@@ -156,33 +157,33 @@ local Orbit_Calc is import("Orbit_Calc").
 				}
 			).
 			Node_Calc["Node_exec"](int_Warp).
-		} //end runModeBmk if
-		Else{
-			Node_Calc["Node_exec"](int_Warp).
-		}
+		} //end else
 	}	/// End Function
 
 ///////////////////////////////////////////////////////////////////////////////////
 	
 	Function ff_AdjOrbInc {
 	Parameter Target_Inc, target_Body is Ship:Orbit:body,int_Warp is false.
-		if runModeBmk = 0{
+		if runMode:haskey("ff_Node_exec") {
+			Node_Calc["Node_exec"](int_Warp).		
+		} //end runModehaskey if
+		Else {
 			Print "Adusting inc".
 			Hill_Climb["Seek"](
 				Hill_Climb["freeze"](time:seconds + gl_apoETA), Hill_Climb["freeze"](0), 0, Hill_Climb["freeze"](0), { parameter mnv. return -abs(mnv:orbit:inclination - Target_Inc). }
 			).
 			Node_Calc["Node_exec"](int_Warp).
-		} //end runModeBmk if
-		Else{
-			Node_Calc["Node_exec"](int_Warp).
-		}
+		} //end else
 	}	/// End Function
 
 ///////////////////////////////////////////////////////////////////////////////////
 
 	Function ff_AdjPlaneInc {
 	Parameter Target_Inc, target_Body, Target_Tolerance is 0.05, int_Warp is false.
-		if runModeBmk = 0{
+		if runMode:haskey("ff_Node_exec") {
+			Node_Calc["Node_exec"](int_Warp).		
+		} //end runModehaskey if
+		Else{
 			Print "Adusting inc plane".
 			Local UT is Orbit_Calc["Find_AN_UT"](target_Body).
 			Hill_Climb["Seek"](
@@ -205,10 +206,7 @@ local Orbit_Calc is import("Orbit_Calc").
 				, True
 			).
 			Node_Calc["Node_exec"](int_Warp).
-		} //end runModeBmk if
-		Else{
-			Node_Calc["Node_exec"](int_Warp).
-		}
+		} //end else
 	}	/// End Function
 
 ///////////////////////////////////////////////////////////////////////////////////

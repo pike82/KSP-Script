@@ -84,7 +84,7 @@ Function runModes{
 	
 	else if runMode = 1.51 { 
 		Print ("Run mode is:" + runMode).
-        Launch["highTurn1"]().
+        Launch["Insertion1"]().
 		set_runmode(2.0).
 		Print "Releasing fairings".
 		Stage. //Relase second stage

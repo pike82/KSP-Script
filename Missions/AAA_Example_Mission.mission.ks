@@ -51,75 +51,75 @@ PRINT ("Downloading libraries").
 
 	
 intParameters().
-Print (runMode).
+Print runMode["runMode"].
 
-Function runModes{
+Function Mission_runModes{
 
 	Print ("inside function runmodes").
-	if runMode = 0.1 { // 0.1 lways has to be the first runmode as this is the first runmode initiated from the boot file unless a reboot occurs.
-		Print("Run mode is:" + runMode).
+	if runMode["runMode"] = 0.1 { // 0.1 lways has to be the first runmode as this is the first runmode initiated from the boot file unless a reboot occurs.
+		Print "Run mode is:" + runMode["runMode"].
         Launch["preLaunch"]().
-		gf_set_runmode(1.2).
+		gf_set_runmode("runMode",1.2).
     } 
 	
-	else if runMode = 1.2 {
-		Print ("Run mode is:" + runMode).
+	else if runMode["runMode"] = 1.2 {
+		Print "Run mode is:" + runMode["runMode"].
         Launch["liftoff"]().
-		gf_set_runmode(1.3).
+		gf_set_runmode("runMode",1.3).
 		Wait 1.
     } 
 	
-	else if runMode = 1.3 {
-		Print ("Run mode is:" + runMode).
+	else if runMode["runMode"] = 1.3 {
+		Print "Run mode is:" + runMode["runMode"].
         Launch["liftoffclimb"]().
-		gf_set_runmode(1.41).
+		gf_set_runmode("runMode",1.41).
     }
 
-	else if runMode = 1.41 {
-		Print ("Run mode is:" + runMode).
+	else if runMode["runMode"] = 1.41 {
+		Print "Run mode is:" + runMode["runMode"].
         Launch["gravityTurn1"](-0.5).
-		gf_set_runmode(1.51).
+		gf_set_runmode("runMode",1.51).
     }
 	
-	else if runMode = 1.51 { 
-		Print ("Run mode is:" + runMode).
-        Launch["highTurn1"]().
-		gf_set_runmode(2.0).
+	else if runMode["runMode"] = 1.51 { 
+		Print "Run mode is:" + runMode["runMode"].
+        Launch["Insertion1"]().
+		gf_set_runmode("runMode",2.0).
 		Stage. //Relase second stage
 		Wait 1.0.
 		Panels on.
     }
 	
-	else if runMode = 2.0 { 
-		Print ("Run mode is:" + runMode).
+	else if runMode["runMode"] = 2.0 { 
+		Print "Run mode is:" + runMode["runMode"].
         ORBManu["Circ"]("apo",0.005, True, sv_targetInclination).
-		gf_set_runmode(3.3).
+		gf_set_runmode("runMode",3.3).
 		wait 5.
     }
 	
-	// else if runMode = 2.1 { 
-		// Print ("Run mode is:" + runMode).
+	// else if runMode["runMode"] = 2.1 { 
+		// Print "Run mode is:" + runMode["runMode"].
         // ORBManu["adjapo"](450000, 500, true).
-		// gf_set_runmode(2.2).
+		// gf_set_runmode("runMode",2.2).
 		// wait 5.
     // }
 	
-		// else if runMode = 2.2 { 
-		// Print ("Run mode is:" + runMode).
+		// else if runMode["runMode"]e = 2.2 { 
+		// Print "Run mode is:" + runMode["runMode"].
         // ORBManu["adjper"](150000, 500, true).
-		// gf_set_runmode(2.3).
+		// gf_set_runmode("runMode",2.3).
 		// wait 5.
     // }
 	
-	// else if runMode = 2.3 { 
-		// Print ("Run mode is:" + runMode).
+	// else if runMode["runMode"] = 2.3 { 
+		// Print "Run mode is:" + runMode["runMode"].
         // ORBManu["adjeccorbit"](400000, 100000, time:seconds + 300, 500, true).
-		// gf_set_runmode(3.1).
+		// gf_set_runmode("runMode",3.1).
 		// wait 5.
     // }
 	
-	// else if runMode = 3.1 { 
-		// Print ("Run mode is:" + runMode).
+	// else if runMode["runMode"] = 3.1 { 
+		// Print "Run mode is:" + runMode["runMode"].
 		// Print "Releasing second Stage".
 		// Stage. //Relase second stage
 		// Wait 1.0. //need to ensure atleast one tick so the second stage occurs and is not merged with the first instruction.
@@ -129,29 +129,29 @@ Function runModes{
 		// Stage. //ensure third stage Active if fairing not realased
 		// Wait 1.0. //need to ensure atleast one tick so the second stage occurs and is not merged with the first instruction.
         // //ORBManu["AdjOrbInc"](3, Ship:Orbit:body, true).
-		// gf_set_runmode(3.3).
+		// gf_set_runmode("runMode",3.3).
 		// wait 5.
     // } 
 	
-	// Else if runMode = 3.2 { 
-		// Print ("Run mode is:" + runMode).
+	// Else if runMode["runMode"] = 3.2 { 
+		// Print "Run mode is:" + runMode["runMode"].
         // ORBRV["CraftTransfer"](vessel("dockTEST"), 1500, 5, True).
-		// gf_set_runmode(3.3).
+		// gf_set_runmode("runMode",3.3).
 		// wait 10.
     // } 
 	
-	Else if runMode = 3.3 { 
-		Print ("Run mode is:" + runMode).
+	Else if runMode["runMode"] = 3.3 { 
+		Print "Run mode is:" + runMode["runMode"].
         ORBManu["adjper"](40000, 500, true).
-		gf_set_runmode(3.4).
+		gf_set_runmode("runMode",3.4).
 		wait 5.
     } 	
-	Else if runMode = 3.4 { 
-		Print ("Run mode is:" + runMode).
+	Else if runMode["runMode"] = 3.4 { 
+		Print "Run mode is:" + runMode["runMode"].
         Landing["SD_Burn"]().
 		Landing["Reentry"]().
 		Landing["ParaLand"]().
-		gf_set_runmode(3.5).
+		gf_set_runmode("runMode",3.5).
 		wait 5.
     } 	
 } /// end of function runmodes
@@ -185,6 +185,9 @@ Function intParameters {
     Lock gl_SEALEVELGRAVITY to (constant():G * body:mass) / body:radius^2. // returns the sealevel gravity for any body that is being orbited.
 	lock gl_apoEta to max(0,ETA:APOAPSIS). //Return time to Apoapsis
 	lock gl_perEta to max(0,ETA:PERIAPSIS). //Return time to Periapsis
+	lock gl_Ship_Ap to Ship:orbit:Apoapsis.
+	lock gl_Ship_Pe to Ship:orbit:Periapsis.
+	lock gl_Ship_Per to Ship:orbit:Period.
 	lock gl_GRAVITY to gl_SEALEVELGRAVITY / ((body:radius+ALTITUDE) / body:radius)^2. //returns the current gravity experienced by the vessel
 	
 	//Locations

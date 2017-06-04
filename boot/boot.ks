@@ -26,10 +26,8 @@ SET TERMINAL:CHARWIDTH TO 6.
 /////////////////////////////////////////
 Print ("==BOOT FILE INITIALISATION==").
 Local bootLast is TIME:SECONDS. // boot last is used to clear the cache to force a mission file recompile
-Global runMode is 0.1.//boot file initialisation of runMode parameter which is used to call/select file functions
-Global runModeBmk is 0.//boot file initialisation of runModeBmk parameter whic is used to call/select helper functions at the file function level only. (do not use this at the helper function level)
-Global runModeBmkVar is 0.//boot file initialisation of runModeBmkvar parameter whic is used to variables at the file function level only. (do not use this at the helper function level)
-Global runModeNode is 0.//boot file initialisation of runModeNode parameter for the execution of a node within the Node_Calcs file level only. (File functions should skip to the correct node execution and this will skip to the active node)
+Global runMode is Lexicon().//boot file initialisation of runMode parameter which is used to call/select file functions
+runMode:add("runMode", 0.1).
 
 ////////////////////////////////////////////////////////////////////
 
@@ -59,13 +57,13 @@ if exists (state.ks) {
 
 } 
 else {
-	gf_set_runmode(0.1). // ensure a new state file is created
+	gf_set_runmode("runMode", 0.1). // ensure a new state file is created
 }
 
 ////////////////////////////////////////////////////////////////////
 
 ON AG10 {
-	SET runMode to -1. //Stop CPU RunMode
+	SET runMode["runMode"] to -1. //Stop CPU RunMode
 } //End program
 
 ////////////////////////////////////////////////////////////////////
@@ -95,21 +93,17 @@ RUNONCEPATH (Mission.ks).
 
 
 Local bootTime To TIME:SECONDS.
-Print "Intial Runmode: " + Runmode.
-Print "Intial runModeBmk: " + runModeBmk.
-Print "Initial runModeNode: " + runModeNode.
+Print "Intial Runmode: " + Runmode:Values.
 
 Print ("==COMMENCING RUNMODE LOOP==").
 // the next loop continuously checks for updates inbetween runmodes and also initiates the mission file
-until runMode = -1 {
+until runMode["runMode"] = -1 {
 	//Print ("Run mode boot loop").
     //if a mission file exisits run it
 	If exists (mission.ks){
 		Print "Mission Exists, Starting runmode".
-		runModes(). // run the runmodes function in the mission file
-		Print "Runmode: " + Runmode.
-		Print "runModeBmk: " + runModeBmk.
-		Print "runModeNode: " + runModeNode.
+		Mission_runModes(). // run the mission runmodes function in the mission file
+		Print "Runmode: " + Runmode:Values.
 	}
 	// in between run modes check for a mission update
 	If TIME:SECONDS - bootTime > 10{
@@ -119,9 +113,9 @@ until runMode = -1 {
 		Set bootTime to TIME:SECONDS.
 	}
 	//Print ("Run modes in boot loop").
-	If runMode = 0{
+	If runMode["Runmode"] = 0{
 		Print "Entering Hibernation mode".
-		Unlock All. //Need to determine if this is a good idea as you will need to reset any lock values
+		Unlock All. //Need to determine if this is a good idea as you will need to reset any locked values
 		Wait 300. //if runmode is zero enter hibernation mode and only check in every 5 minute to conserve power
 	}
     wait 0.001.
@@ -133,14 +127,19 @@ until runMode = -1 {
 
 // Persist runmode to disk
 function gf_set_runmode { // use quotations if you want to use string runmode names
-parameter mode.
-	if exists (State.ks){ 
-		//ensures there is something to delete if no state has been set.
-		Deletepath (State.ks).
-	}
-	Log "Set runmode to " + mode + "." to state.ks.
-	set runmode to mode.
+parameter key, mode.
+	Log "Set runmode["+ key +"] to " + mode + "." to state.ks.
+	set runmode[key] to mode.
+	Print "Runmode " + key + " set to : " + runmode[key].
 }
+
+function gf_remove_runmode { // use quotations if you want to use string runmode names
+parameter key.
+	Log "runmode:remove("+ key +")." to state.ks.
+	runmode:Remove(key).
+	Print "Runmode " + key + " Removed".
+}
+
 
 // Persist bootlast to disk
 function gf_set_BootCache { // use quotations if you want to use string runmode names
@@ -226,7 +225,7 @@ PARAMETER filePath, name, newName.
 // function gf_PrintDisplay {
     // clearscreen.
     // print "===OVERALL STATUS===".
-	// //Print "   Runmode:    " + round(ship:velocity:surface:mag).
+	// //Print "   Runmode:    " + runmode.
 	
 	// print "===LANDING STATUS===".
     // //PRINT "VELOCITY".
