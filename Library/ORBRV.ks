@@ -145,39 +145,52 @@ parameter target_vessel, Max_orbits.
 	Set tgt_perEta to max(0,ETA:PERIAPSIS).
 	Set tgt_PeLatLng to target_vessel:body:geopositionof(positionat(target_vessel, time:seconds + tgt_perEta)). //The Lat and long of the PE
 	
+	// Arrange Longitudes on in 360 reference
 	Set tgt_PeLng to tgt_PeLatLng:lng.
-	Print "tgt_PeLng: " + tgt_PeLng.
-	// if tgt_PeLng < 0
-		// set tgt_PeLng to abs(tgt_PeLng).
-	// else
-		// set tgt_PeLng to 360-tgt_PeLng.
-	Print "tgt_PeLng: " + tgt_PeLng.
+	Print "tgt_PeLng Pre: " + tgt_PeLng.
+	if tgt_PeLng < 0
+		set tgt_PeLng to abs(tgt_PeLng).
+	else
+		set tgt_PeLng to 360-tgt_PeLng.
+	Print "tgt_PeLng Post: " + tgt_PeLng. 
 	
 	Set ShipPeLng to gl_PeLatLng:lng.
-	Print "ShipPeLng: " + ShipPeLng.
-	// if ShipPeLng < 0
-		// set ShipPeLng to abs(ShipPeLng).
-	// else
-		// set ShipPeLng to 360-ShipPeLng.
-	Print "ShipPeLng: " + ShipPeLng.
+	Print "ShipPeLng Pre: " + ShipPeLng.
+	if ShipPeLng < 0
+		set ShipPeLng to abs(ShipPeLng).
+	else
+		set ShipPeLng to 360-ShipPeLng.
+	Print "ShipPeLng Post: " + ShipPeLng.
+		
+	// Work out the angle required to be covered
 	
-	Set longDiff to ShipPeLng - tgt_PeLng.	
-	//Set longDiff to abs(ShipPeLng - tgt_PeLng).
-	Print "longDiff: " + longDiff.
+	If PerLead > 0 { // Target aproaching ship from behind
+		if ShipPeLng > tgt_PeLng{
+			Set longDiff to ShipPeLng - tgt_PeLng.		
+		} //then just need ship minus tgt as it is infront
+		if ShipPeLng < tgt_PeLng{
+			Set longDiff to 360 + ShipPeLng - tgt_PeLng.			
+		} //then the target needs to go the full way around so 360 + diff
+	}
 	
-	// If PerLead > 0 {
-		// Set longDiff to 360 - longDiff.
-	// }
+	If PerLead < 0 { // Ship aproaching ship from behind
+		if tgt_PeLng > ShipPeLng {
+			Set longDiff to tgt_PeLng - ShipPeLng.		
+		} //then just need tgt minus ship as it is infront
+		if  tgt_PeLng < ShipPeLng {
+			Set longDiff to 360 + tgt_PeLng - ShipPeLng.			
+		} //then the ship needs to go the full way around so 360 + diff
+	}		
 	Print "longDiff: " + longDiff.
 	
 	Set LongDiffTime to (longDiff/360)*gl_Ship_Per. //Time difference between longitudes
 	Print "LongDiffTime: " + LongDiffTime.
 	Set tgtShiptPeTime to tgt_perEta - LongDiffTime. //Time for the target to be over the ship PE (approx)
 	Print "tgtShiptPeTime: " + tgtShiptPeTime.
-	Print "gl_perEta: " + gl_perEta.
+	Print "gl_perEta: " + gl_perEta. // Ship time to Pe
 	Set ShipTgtDiffTime to gl_perEta - tgtShiptPeTime. //Time phase difference between the ship and the Target.
 	Print "ShipTgtDiffTime: " + ShipTgtDiffTime.
-	Set orbCatchup to ShipTgtDiffTime / PerLead.
+	Set orbCatchup to abs(ShipTgtDiffTime / PerLead).
 	Print "orbCatchup : " + orbCatchup.
 
 	local arr is lexicon().
@@ -186,18 +199,14 @@ parameter target_vessel, Max_orbits.
 	arr:add ("Orbits_Phasing", Orbits_Phasing).
 	arr:add ("ShipTgtDiffTime", ShipTgtDiffTime).
 	arr:add ("orbCatchup", orbCatchup).
-
 	
 	Return (arr).
-
-
 } // End Function
 
 ///////////////////////////////////////////////////////////////////////////////////
 
 function hf_TransferBurn {
 parameter target_vessel, target_distance, Max_orbits, int_Warp is False.
-	// TODO:Work lead and lag to see if can be more efficient in finding an intial estimated solution or using seek instead of seek_low for a faster solution for big changes.
 	//TODO: Test all sectors or orbits and  Pe and APO variations to ensure it works in all cases
 	//TODO: Look into the if case and why it is not working
 
@@ -213,17 +222,7 @@ parameter target_vessel, target_distance, Max_orbits, int_Warp is False.
 	Set ShipTgtDiffTime to arr ["ShipTgtDiffTime"].
 	Set orbCatchup to arr ["orbCatchup"].
 	
-
-	
-	// First check if reducing at Ap is possible (a ship with very close orbit period and a large starting phase, may not be able to lower its Pe enough within the Max Orbits.
-	// This first needs to have their PE lowered to allow the solution to increase the AP)
-	// IF gl_Ship_Pe > Ap_Tar and abs(Orbits_Phasing) > Max_orbits {
-	// //intercept not possible . Must burn at APo to lower SMI and period
-		// Print "Intercept not possible, Orbit too big. decreasing Periapsis as orbits too similar to make intercept from Apoapsis stright away".
-		// ORBManu["adjper"](Ap_Tar-target_distance, 50, true). //reduces periapsis to be lower that the traget crafts Apoapsis - the target distance to ensure inside the Apoapsis	
-	// } // end if	
-	
-// calc min Ap possible .
+// calc min Pe possible .
 local Bod_Rad is Ship:Body:Radius.
 Local atm_Height is 0.
 
@@ -233,7 +232,6 @@ Local atm_Height is 0.
 	Else{
 		Set atm_Height to (1.15*bod_rad). //estimate of the min clearance height possible for vacuumn bodies.
 	} //end else
-	
 	Print "atm_Height" + atm_Height.
 	
 //Performa all changes at periapsis for the orbital Mnv. Make the starting time to the next Periapsis or the one after if its too close.
@@ -246,11 +244,10 @@ Local atm_Height is 0.
 	} // end else
 	Print "Starting Time:" + Starting_time. 
 	Print "Max Time:" + Max_Orb_UT.
-	
+
+/////Look at the current orbits and see if RV can occur, if not adjust and find a solution.
 	Local result is lexicon().
 	
-/////Look at the current orbits and see if RV can occur, if not adjust and find a solution.
-
 	IF gl_Ship_Pe > Ap_Tar {
 	//intercept not possible . Must burn at APo to lower Pe so orbits cross.
 	Print "Intercept not possible, Orbit too big, decreasing Apoapsis at Periapsis".
@@ -290,6 +287,7 @@ Local atm_Height is 0.
 	ELSE{
 	//Orbits could cross with the correct orientation. The Hill climb function can be used to make the orientation correct. Lookinto if there is a specific time in the orbit which will make this be more efficent.
 		Print "Orbits Cross if Orientation OK".
+		//TODO put in a way to determine the orientation.
 		Wait 10.0. //debugging
 		Set result to hf_find_intersect (target_vessel, Starting_time, Target_distance, Max_Orb_UT, atm_Height, minOrbits_Phasing, "Bigger").	//end find intersect
 	}//End Else
