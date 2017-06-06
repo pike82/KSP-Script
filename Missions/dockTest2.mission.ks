@@ -78,7 +78,7 @@ Function Mission_runModes{
 
 	else if runMode["runMode"] = 1.41 {
 		Print "Run mode is:" + runMode["runMode"].
-        Launch["gravityTurn1"](0.0, 0.25, 0.0, 0.0, -0.2, 0.2).
+        Launch["gravityTurn1"](0.0, 0.20, 0.35, 1.0, -0.1, 0.1).
 		gf_set_runmode("runMode",1.51).
     }
 	
@@ -133,7 +133,7 @@ Function Mission_runModes{
 	
 	Else if runMode["runMode"] = 3.2 { 
 		Print "Run mode is:" + runMode["runMode"].
-        ORBRV["CraftTransfer"](vessel("dockTEST"), 500, 5, True).
+        ORBRV["CraftTransfer"](vessel("dockTEST"), 500, 10, True).
 		gf_set_runmode("runMode",3.21).
 		wait 2.
     } 
@@ -184,7 +184,7 @@ Function intParameters {
 	//Ship Variable Inital Launch Parameters
 	///////////////////////
  	Set sv_targetInclination to 0.02. //Desired Inclination
-    Set sv_targetAltitude to 100000. //Desired Orbit Altitude from Sea Level
+    Set sv_targetAltitude to 98000. //Desired Orbit Altitude from Sea Level
     Set sv_ClearanceHeight to 200. //Intital Climb to Clear the Tower and start Pitchover Maneuver
     Set sv_anglePitchover to 85. //Final Pitchover angle
 	Set sv_intAzimith TO Launch_Calc ["LaunchAzimuth"](sv_targetInclination,sv_targetAltitude).

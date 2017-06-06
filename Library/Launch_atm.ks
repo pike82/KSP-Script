@@ -117,9 +117,9 @@ Function ff_GravityTurn1{
 		Print "Max G: "+(sv_maxGeeTarget).
 		Print "Throttle Setting: "+(gl_TVALMax).
 		//PID Log for tuning
-		Switch to 0.
-		Log (TIME:SECONDS - StartLogtime) +","+ (gravPitch) +","+(gl_AoA) +","+ (dPitch) +","+ (PIDAngle:PTerm) +","+ (PIDAngle:ITerm) +","+ (PIDAngle:DTerm) to AOA.csv.
-		Switch to 1.
+		// Switch to 0.
+		// Log (TIME:SECONDS - StartLogtime) +","+ (gravPitch) +","+(gl_AoA) +","+ (dPitch) +","+ (PIDAngle:PTerm) +","+ (PIDAngle:ITerm) +","+ (PIDAngle:DTerm) to AOA.csv.
+		// Switch to 1.
 		//End PID Log loop
 		Wait 0.05.
 	}	/// End of Until

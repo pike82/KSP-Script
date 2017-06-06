@@ -109,7 +109,10 @@ until runMode["runMode"] = -1 {
 	If TIME:SECONDS - bootTime > 10{
 		Print "Checking For Mission Update".
 		gf_checkUpdate().
-		wait 0.2.
+		Print "CPU Space Capacity: " + core:currentvolume:Capacity.
+		Print "Free CPU Space: " + core:currentvolume:FreeSpace.
+		Print "CPU Power Drain: " + core:currentvolume:Powerrequirement.
+		wait 0.1.
 		Set bootTime to TIME:SECONDS.
 	}
 	//Print ("Run modes in boot loop").
@@ -128,14 +131,14 @@ until runMode["runMode"] = -1 {
 // Persist runmode to disk
 function gf_set_runmode { // use quotations if you want to use string runmode names
 parameter key, mode.
-	Log "Set runmode["+ key +"] to " + mode + "." to state.ks.
+	Log "Set runmode["+char(34)+ key +char(34)+"] to " + mode + "." to state.ks.
 	set runmode[key] to mode.
 	Print "Runmode " + key + " set to : " + runmode[key].
 }
 
 function gf_remove_runmode { // use quotations if you want to use string runmode names
 parameter key.
-	Log "runmode:remove("+ key +")." to state.ks.
+	Log "runmode:remove("+ char(34)+ key + char(34)+")." to state.ks.
 	runmode:Remove(key).
 	Print "Runmode " + key + " Removed".
 }
@@ -222,6 +225,12 @@ PARAMETER filePath, name, newName.
  
 //////////////////////////////////////////////////////
  
+ // Initialisation of global variables for the graphical user interface display
+ // Global gv_gui_Status is 0.
+ // Global gv_gui_Runmode is 0.
+ // Global gv_gui_RunmodeLoopName is 0.
+ // Global gv_gui_DisplayInfo is lexicon().
+ // Global gv_gui_OtherInfo is 0. 
 // function gf_PrintDisplay {
     // clearscreen.
     // print "===OVERALL STATUS===".
