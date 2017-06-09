@@ -85,7 +85,9 @@ Function ff_GravityTurn1{
 	Set gravPitch to sv_anglePitchover.	///Intital setup
 	LOCK STEERING TO HEADING(sv_intAzimith, gravPitch). //move to pitchover angle
 	
-
+	//SET PID TO PIDLOOP(KP, KI, KD, MINOUTPUT, MAXOUTPUT). 0.7 and 2.72s
+	Set PIDAngle to PIDLOOP(Kp, Ki, Kd,PID_Min,PID_Max).
+	Set PIDAngle:SETPOINT to AoATarget.
 	Set StartLogtime to TIME:SECONDS.
 	//Log "# Time, # grav pitch, # AoA, # dPitch, # PTerm , # ITerm , # DTerm" to AOA.csv.
 	
@@ -94,10 +96,6 @@ Function ff_GravityTurn1{
 		Staging["FAIRING"]().
 		Staging["COMMS"]().
 
-
-		//SET PID TO PIDLOOP(KP, KI, KD, MINOUTPUT, MAXOUTPUT). 0.7 and 2.72s
-		Set PIDAngle to PIDLOOP(Kp, Ki, Kd,PID_Min,PID_Max).
-		Set PIDAngle:SETPOINT to AoATarget.
 		SET dPitch TO PIDAngle:UPDATE(TIME:SECONDS, gl_AoA).
 		// you can also get the output value later from the PIDLoop object
 		// SET OUT TO PID:OUTPUT.
@@ -116,6 +114,9 @@ Function ff_GravityTurn1{
 		Print "TWRTarget: "+(gl_TWRTarget).
 		Print "Max G: "+(sv_maxGeeTarget).
 		Print "Throttle Setting: "+(gl_TVALMax).
+		Print PIDAngle:PTerm.
+		Print PIDAngle:ITerm.
+		Print PIDAngle:DTerm.
 		//PID Log for tuning
 		// Switch to 0.
 		// Log (TIME:SECONDS - StartLogtime) +","+ (gravPitch) +","+(gl_AoA) +","+ (dPitch) +","+ (PIDAngle:PTerm) +","+ (PIDAngle:ITerm) +","+ (PIDAngle:DTerm) to AOA.csv.
@@ -295,6 +296,31 @@ Unlock targetTTapo.
 
 }// End of Function	
 	
+Function ff_Insertion5{ // PID Code stepping time to Apo
+
+ LOCAL AZMPID IS PIDLOOP(0.1,0,0.05,-1, 1).
+    SET AZMPID:SETPOINT TO Tincl.
+
+    LOCAL FPAPID IS PIDLOOP(0.1,0.05,0.05,-1, 1).
+    SET FPAPID:SETPOINT TO Tperg.
+
+    LOCAL ROLLPID IS PIDLOOP(0.1,0,0.01,-1, 1).
+    SET ROLLPID:SETPOINT TO 0.
+    PRINT "INITIATING SECOND STAGE CLOSED LOOP CONTROL...". WAIT 2.
+    PRINT "SECOND STAGE IGNITION.".
+    STAGE.
+    UNLOCK STEERING.
+    UNTIL SHIP:MAXTHRUST = 0 {
+		SET FPAPID:SETPOINT TO altitude / 50000. // this change the setpoint at every loop 
+	
+        SET SHIP:CONTROL:YAW   TO AZMPID:UPDATE(TIME:SECONDS, SHIP:INCLINATION).
+        SET SHIP:CONTROL:PITCH TO FPAPID:UPDATE(TIME:SECONDS, SHIP:APOAPSIS).
+        SET SHIP:CONTROL:ROLL  TO ROLLPID:UPDATE(TIME:SECONDS, SHIP:FACING:ROLL).
+        WAIT 0.01.
+    }
+
+}// End of Function	
+
 	
 ///////////////////////////////////////////////////////////////////////////////////
 //Export list of functions that can be called externally for the mission file	to use

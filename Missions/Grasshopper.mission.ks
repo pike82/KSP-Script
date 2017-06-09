@@ -34,140 +34,92 @@ for Processor in ALL_PROCESSORS {
 		}
 	}
 }.		
- wait 1.	
- Run ONCE knu.
+ wait 0.5. // ensure above mesage process has finished	
  
  //TODO: Look at implimenting a Flight readout script like the KOS-Stuff_master gravity file for possible implimentation.
  
 PRINT ("Downloading libraries").
 //download dependant libraries first
 	local Launch is import("Launch_atm").
-	local ORBManu is import("ORBManu").
-	local ORBRV is import("ORBRV").
-	local Landing is import("Landing_atm").
-	local Launch_Calc is import("Launch_Calc").
 	local Orbit_Calc is import("Orbit_Calc").
-	local Staging is import("Staging").
-	local Docking is import("Docking").
 	local Node_Calc is import("Node_Calc").
+	//local Hover is import("Hover").
 
 	
 intParameters().
 Print runMode["runMode"].
 
 Function Mission_runModes{
+	LOCK STEERING TO HEADING(0, 90).
+	Lock Throttle to 0.7.
+	Stage. // starts engine
+	Print "Climbing".
+	Wait until gl_baseALTRADAR > 100.
+	Print "Hovering".
+	
+	Set Targetpt to 500.0.
+	Set Kp to 0.07. 
+	Set Ki to 0.02813. 
+	Set Kd to 0.18. 
+	Set PID_Min to -0.01. 
+	Set PID_Max to 0.01. 
+	Set ThrotSetting to 0.7.
+	Set Secondfunc to 0.0.
+	Lock Throttle to ThrotSetting.
+	Set Timebase to TIME:SECONDS. 
+	Print "Timebase" + Timebase.
+	Set PIDThrot to PIDLOOP(Kp, Ki, Kd, PID_Min, PID_Max).//SET PID TO PIDLOOP(KP, KI, KD, MINOUTPUT, MAXOUTPUT).
+	Set PIDThrot:SETPOINT to Targetpt.
+	
+	Until Timebase + 120 < TIME:SECONDS {
+		
 
-	Print ("inside function runmodes").
-	if runMode["runMode"] = 0.1 {
-		Print "Run mode is:" + runMode["runMode"].
-        Launch["preLaunch"]().
-		gf_set_runmode("runMode",1.2).
-    } 
+		Set tgt to gl_baseALTRADAR.
+		If (Timebase +90 < time:seconds) and Secondfunc = 0{
+			Set Secondfunc to 1.
+			Set PIDThrot:SETPOINT to 50.
+			PIDThrot:RESET().			
+		}
+		SET dThrot TO PIDThrot:UPDATE(TIME:SECONDS, tgt).
+		// you can also get the output value later from the PIDLoop object
+		// SET OUT TO PID:OUTPUT.
+		Set ThrotSetting to min(max(ThrotSetting + dThrot,0),1). //current pitch setting plus the change from the PID
+		ClearScreen.
+		Print TIME:SECONDS - Timebase.
+		Print PIDThrot:KP.
+		Print PIDThrot:KI.
+		Print PIDThrot:KD.
+		Print PIDThrot:Error.
+		Print PIDThrot:CHANGERATE.
+		Print PIDThrot:ERRORSUM.
+		Print PIDThrot:INPUT.
+		Print PIDThrot:OUTPUT.
+		Print "P: " + PIDThrot:PTerm.
+		Print "I: " + PIDThrot:ITerm.
+		Print "D: " + PIDThrot:DTerm.		
+		//Print "Delta throttle: "+ dThrot.
+		Print "Setpoint ThrotSetting: "+ ThrotSetting.
+		Print "Radar" + tgt.
+		// Switch to 0.
+		// LOG (TIME:SECONDS - Timebase) + "," + tgt + "," + ThrotSetting TO "testflight.csv".
+		// Switch to 1.
+		// Print "gl_InstMaxVertAcc:" + gl_InstMaxVertAcc.
+		// Print "gl_fallTime:" + gl_fallTime.
+		// Print "gl_fallVel:" + gl_fallVel.
+		// Print "gl_fallDist:" + gl_fallDist.
+		// Print "gl_fallBurnTime:" + gl_fallBurnTime.
+		// Print "gl_baseALTRADAR:" + gl_baseALTRADAR.
+		Wait 0.01.
+	}
+	Print "Landing".
+	Until Ship:Status = "LANDED"{
+		Lock Throttle to 0.3.
+	}
+	Set SHIP:CONTROL:PILOTMAINTHROTTLE to 0.0.
+	Print "Landed".
+	Wait 0.1.
+	gf_set_runmode("runMode",-1).
 	
-	else if runMode["runMode"] = 1.2 {
-		Print "Run mode is:" + runMode["runMode"].
-        Launch["liftoff"]().
-		gf_set_runmode("runMode",1.3).
-		Wait 1.
-    } 
-	
-	else if runMode["runMode"] = 1.3 {
-		Print "Run mode is:" + runMode["runMode"].
-        Launch["liftoffclimb"]().
-		gf_set_runmode("runMode",1.41).
-    }
-
-	else if runMode["runMode"] = 1.41 {
-		Print "Run mode is:" + runMode["runMode"].
-        Launch["gravityTurn1"](0.0, 0.20, 0.35, 1.0, -0.1, 0.1).
-		gf_set_runmode("runMode",1.51).
-    }
-	
-	else if runMode["runMode"] = 1.51 { 
-		Print "Run mode is:" + runMode["runMode"].
-        Launch["Insertion1"]().
-		gf_set_runmode("runMode",2.0).
-		Wait 1.0.
-		Panels on.
-    }
-	
-	else if runMode["runMode"] = 2.0 { 
-		Print "Run mode is:" + runMode["runMode"].
-        ORBManu["Circ"]("apo",0.005, True, sv_targetInclination).
-		gf_set_runmode("runMode",3.1).
-		wait 5.
-    }
-	
-	// else if runMode["runMode"] = 2.1 { 
-		// Print "Run mode is:" + runMode["runMode"].
-        // ORBManu["adjapo"](250000, 500, true).
-		// gf_set_runmode("runMode",2.2).
-		// wait 5.
-    // }
-	
-		// else if runMode["runMode"] = 2.2 { 
-		// Print "Run mode is:" + runMode["runMode"].
-        // ORBManu["adjper"](150000, 500, true).
-		// gf_set_runmode("runMode",3.1).
-		// wait 5.
-    // }
-	
-	// else if runMode["runMode"] = 2.3 { 
-		// Print "Run mode is:" + runMode["runMode"].
-        // ORBManu["adjeccorbit"](200000, 130000, time:seconds + 300, 500, true).
-		// gf_set_runmode("runMode",3.1).
-		// wait 5.
-    // }
-	
-	else if runMode["runMode"] = 3.1 { 
-		Print "Run mode is:" + runMode["runMode"].
-		Print "Releasing second Stage".
-		Stage. //Relase second stage
-		Wait 1.0. //need to ensure atleast one tick so the second stage occurs and is not merged with the first instruction.
-		Print "Activating third Stage Engine".
-		Stage. //ensure third stage Active
-		Wait 1.0. //need to ensure atleast one tick so the second stage occurs and is not merged with the first instruction.
-		//ORBManu["AdjOrbInc"](3, Ship:Orbit:body, true).
-		gf_set_runmode("runMode",3.2).
-		wait 5.
-    } 
-	
-	Else if runMode["runMode"] = 3.2 { 
-		Print "Run mode is:" + runMode["runMode"].
-        ORBRV["CraftTransfer"](vessel("dockTEST"), 500, 10, True).
-		gf_set_runmode("runMode",3.21).
-		wait 2.
-    } 
-	
-	Else if runMode["runMode"] = 3.21 { 
-		Print "Run mode is:" + runMode["runMode"].
-        Docking["dok_dock"]("TestPort1", "TestPort", "dockTEST"). // Name of port on Docking vessel, Name of Target port, Name of Target Vessel, Safe distance (optional)
-		gf_set_runmode("runMode",3.22).
-		wait 15.
-    } 
-	
-	
-	Else if runMode["runMode"] = 3.22 { 
-		Print "Run mode is:" + runMode["runMode"].
-        Docking["undock"]("TestPort1", "TestPort", "dockTEST",600). // Name of port on Docking vessel, Name of Target port, Name of Target Vessel, Safe distance (optional)
-		gf_set_runmode("runMode",3.3).
-		wait 5.
-    } 
-	
-	Else if runMode["runMode"] = 3.3 { 
-		Print "Run mode is:" + runMode["runMode"].
-        ORBManu["adjper"](40000, 500, true).
-		gf_set_runmode("runMode",3.4).
-		wait 5.
-    } 	
-	Else if runMode["runMode"] = 3.4 { 
-		Print "Run mode is:" + runMode["runMode"].
-        Landing["SD_Burn"]().
-		Landing["Reentry"]().
-		Landing["ParaLand"]().
-		gf_set_runmode("runMode",3.5).
-		wait 5.
-    } 	
 } /// end of function runmodes
 
 	
@@ -177,7 +129,7 @@ Function intParameters {
 	//Ship Particualrs
 	//////////////////////
 	Set sv_maxGeeTarget to 4.  //max G force to be experienced
-	Set sv_shipHeight to 79.	// the hieght of the ship to allow for height correction	
+	Set sv_shipHeight to 4.1.	// the hieght of the ship to allow for height correction	
 	Set sv_gimbalLimit to 10. //Percent limit on the Gimbal is (10% is typical to prevent vibration however may need higher for large rockets with poor control up high)
 	Set sv_MaxQLimit to 0.3. //0.3 is the Equivalent of 40Kpa Shuttle was 30kps and others like mercury were 40kPa.
 	
@@ -185,10 +137,10 @@ Function intParameters {
 	//Ship Variable Inital Launch Parameters
 	///////////////////////
  	Set sv_targetInclination to 0.02. //Desired Inclination
-    Set sv_targetAltitude to 98000. //Desired Orbit Altitude from Sea Level
+    Set sv_targetAltitude to 100000. //Desired Orbit Altitude from Sea Level
     Set sv_ClearanceHeight to 200. //Intital Climb to Clear the Tower and start Pitchover Maneuver
     Set sv_anglePitchover to 85. //Final Pitchover angle
-	Set sv_intAzimith TO Launch_Calc ["LaunchAzimuth"](sv_targetInclination,sv_targetAltitude).
+	//Set sv_intAzimith TO Launch_Calc ["LaunchAzimuth"](sv_targetInclination,sv_targetAltitude).
 	Set sv_landingtargetLATLNG to latlng(-0.0972092543643722, -74.557706433623). // This is for KSC but use target:geoposition if there is a specific target vessel on the surface that can be used.
 	Set sv_prevMaxThrust to 0. //used to set up for the flameout function
 	///////////////////////

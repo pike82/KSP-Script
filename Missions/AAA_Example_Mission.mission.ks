@@ -48,6 +48,7 @@ PRINT ("Downloading libraries").
 	local Orbit_Calc is import("Orbit_Calc").
 	local Staging is import("Staging").
 	local Docking is import("Docking").
+	local Node_Calc is import("Node_Calc").
 
 	
 intParameters().
@@ -209,15 +210,15 @@ Function intParameters {
 	
 	
 	//Fall Predictions and Variables
-	Lock gl_fallTime to Orbit_Cals["quadraticMinus"](gl_GRAVITY, ship:verticalspeed, gl_baseALTRADAR).//r = r0 + vt - 1/2at^2 ===> Quadratic equiation at2^2 + bt + c = 0 a= acceleration, b=velocity, c= distance
+	Lock gl_fallTime to Orbit_Calc["quadraticMinus"](gl_GRAVITY, ship:verticalspeed, gl_baseALTRADAR).//r = r0 + vt - 1/2at^2 ===> Quadratic equiation at2^2 + bt + c = 0 a= acceleration, b=velocity, c= distance
 	lock gl_fallVel to ship:verticalspeed + (gl_GRAVITY*gl_fallTime).//v = u + at
-	lock gl_fallDist to ship:verticalspeed^2 / (2*maxVertAcc). // v^2 = u^2 + 2as ==> s = ((v^2) - (u^2))/2a
+	lock gl_fallDist to ship:verticalspeed^2 / (2*gl_InstMaxVertAcc). // v^2 = u^2 + 2as ==> s = ((v^2) - (u^2))/2a
 	Lock gl_fallBurnTime to Node_Calc["burn_time"](gl_fallVel). 
 	
 	//Instantaneous Predictions and variables
 	lock gl_InstConImpactTime to gl_baseALTRADAR / abs(VERTICALSPEED). //gives instantaneous time to impact if vertical velocity remains constant
-	Lock gl_InstMaxVertAcc to (ship:availiblethrust / ship:mass) - gl_GRAVITY. //gives max vertical acceleration at this point in time fighting gravity
-	Lock gl_InstMaxHorzAcc to (ship:availiblethrust / ship:mass). //gives max horizontal acceleration at this point in time
+	Lock gl_InstMaxVertAcc to (ship:AVAILABLETHRUST / ship:mass) - gl_GRAVITY. //gives max vertical acceleration at this point in time fighting gravity
+	Lock gl_InstMaxHorzAcc to (ship:AVAILABLETHRUST / ship:mass). //gives max horizontal acceleration at this point in time
 	lock gl_InstkillTime to ((gl_totalSurfSpeed/gl_TWRTarget)* gl_GRAVITY) / (gl_TWRTarget). // t0 = Vel/TWR  t1 = t0*g/TWR Tf = t1 + t0 ==> ((Vel/TWR)*g)/TWR gives instantaneous time to kill all speed
 	
 	

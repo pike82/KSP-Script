@@ -17,7 +17,8 @@ local Hill_Climb is import("Hill_Climb").
 		"Find_AN_INFO", ff_Find_AN_INFO@,
 		"Find_AN_UT", ff_Find_AN_UT@,
 		"TAr", ff_TAr@,
-		"TAtimeFromPE", ff_TAtimeFromPE@
+		"TAtimeFromPE", ff_TAtimeFromPE@,
+		"quadraticMinus", ff_quadraticMinus@
     ).
 
 ////////////////////////////////////////////////////////////////
@@ -154,6 +155,10 @@ function ff_TAtimeFromPE {
 	return TA_time. //TA time from PE in seconds
 }
 
+function ff_quadraticMinus {
+	parameter a, b, c.
+	return (-b - sqrt(max(b ^ 2 - 4 * a * c, 0))) / (2 * a).
+}
 
 ////////////////////////////////////////////////////////////////
 //Helper Functions
@@ -215,11 +220,6 @@ function hf_MeanAnom {
 function hf_quadraticPlus {
 	parameter a, b, c.
 	return (b - sqrt(max(b ^ 2 - 4 * a * c, 0))) / (2 * a).
-}
-
-function hf_quadraticMinus {
-	parameter a, b, c.
-	return (-b - sqrt(max(b ^ 2 - 4 * a * c, 0))) / (2 * a).
 }
 
 function hf_normalvector{

@@ -3,7 +3,7 @@
 
 ///// Download Dependant libraies
 local Staging is import("Staging").
-local Orbit_Calcs is import("Orbit_Calc").
+local Orbit_Calc is import("Orbit_Calc").
 local Node_Calc is import("Node_Calc").
 
 ///////////////////////////////////////////////////////////////////////////////////
@@ -27,7 +27,7 @@ Parameter SafeAlt is 50, TargetLatLng is "Null", MaxSlopeAng is 1.
 
 Until (gl_fallTime < (gl_fallBurnTime + (SafeAlt/ship:verticalspeed))) or (gl_fallDist < ( gl_baseALTRADAR + SafeAlt)){
 	Clearscreen.
-	Print "maxStopAcc:" + maxStopAcc.
+	Print "gl_InstMaxVertAcc:" + gl_InstMaxVertAcc.
 	Print "gl_fallTime:" + gl_fallTime.
 	Print "gl_fallVel:" + gl_fallVel.
 	Print "gl_fallDist:" + gl_fallDist.
@@ -180,7 +180,7 @@ function hf_geoDir { //compass angle of direction to landing spot
 
 function hf_ImpactEta {
     parameter acc, thrtl, g, vel, h.
-    return Orbit_Calc["quadraticMinus"]((acc * thrtl - g), vel, h).
+    return Orbit_Calcs["quadraticMinus"]((acc * thrtl - g), vel, h).
 }
 
 function hf_cardVel {
