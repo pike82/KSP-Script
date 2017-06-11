@@ -50,77 +50,414 @@ intParameters().
 Print runMode["runMode"].
 
 Function Mission_runModes{
-	LOCK STEERING TO HEADING(0, 90).
-	Lock Throttle to 0.7.
-	Stage. // starts engine
-	Print "Climbing".
-	Wait until gl_baseALTRADAR > 100.
-	Print "Hovering".
-	
-	Set Targetpt to 500.0.
-	Set Kp to 0.07. 
-	Set Ki to 0.02813. 
-	Set Kd to 0.18. 
-	Set PID_Min to -0.01. 
-	Set PID_Max to 0.01. 
-	Set ThrotSetting to 0.7.
-	Set Secondfunc to 0.0.
-	Lock Throttle to ThrotSetting.
 	Set Timebase to TIME:SECONDS. 
 	Print "Timebase" + Timebase.
-	Set PIDThrot to PIDLOOP(Kp, Ki, Kd, PID_Min, PID_Max).//SET PID TO PIDLOOP(KP, KI, KD, MINOUTPUT, MAXOUTPUT).
-	Set PIDThrot:SETPOINT to Targetpt.
+	Set BaseLoc to gl_shipLatLng.
+	Set BaseHeight to gl_surfaceElevation.
+	Set SteerDirection to HEADING(90,90).///HEADING(compass, pitch)
+	LOCK STEERING TO SteerDirection.
+	Set ThrottSetting to 0.0.
+	Lock Throttle to ThrottSetting.
+	Set TgtCoord to latlng(BaseLoc:lat- 0.01, BaseLoc:lng + 0.01).
+	Set lastdt to TIME:SECONDS.
+	Set DegDistance to (body:radius*2*constant:pi)/360.
+	//Set NorthVec to 
+	//Set EastVec to 
 	
-	Until Timebase + 120 < TIME:SECONDS {
-		
+	
+	//===ALTITUDE====
+	//Desired velocity
+	Set KpALT to 0.9. 
+	Set KiALT to 0.0. 
+	Set KdALT to 0.0005. 
+	Set ALT_Min to -5. 
+	Set ALT_Max to 5. 
+	Set PIDALT to PIDLOOP(KpALT, KiALT, KdALT, ALT_Min, ALT_Max).// , PID_Min, PID_Max).//SET PID TO PIDLOOP(KP, KI, KD, MINOUTPUT, MAXOUTPUT).	
 
-		Set tgt to gl_baseALTRADAR.
-		If (Timebase +90 < time:seconds) and Secondfunc = 0{
-			Set Secondfunc to 1.
-			Set PIDThrot:SETPOINT to 50.
-			PIDThrot:RESET().			
-		}
-		SET dThrot TO PIDThrot:UPDATE(TIME:SECONDS, tgt).
-		// you can also get the output value later from the PIDLoop object
-		// SET OUT TO PID:OUTPUT.
-		Set ThrotSetting to min(max(ThrotSetting + dThrot,0),1). //current pitch setting plus the change from the PID
+	//Desired throttle setting
+	Set KpThrott to 0.1. 
+	Set KiThrott to 0.2. 
+	Set KdThrott to 0.005. 
+	Set Thrott_Min to 0. 
+	Set Thrott_Max to 1. 
+	Set PIDThrott to PIDLOOP(KpThrott, KiThrott, KdThrott, Thrott_Min, Thrott_Max).// , PID_Min, PID_Max).//SET PID TO PIDLOOP(KP, KI, KD, MINOUTPUT, MAXOUTPUT).	
+
+
+//===LATITUDE (North) ====
+	//Desired velocity
+	Set KpLAT to 1.0. 
+	Set KiLAT to 0.0. 
+	Set KdLAT to 5.0. 
+	Set LAT_Min to -5/DegDistance. 
+	Set LAT_Max to 5/DegDistance. 
+	Set PIDLAT to PIDLOOP(KpLAT, KiLAT, KdLAT, LAT_Min, LAT_Max).// , PID_Min, PID_Max).//SET PID TO PIDLOOP(KP, KI, KD, MINOUTPUT, MAXOUTPUT).	
+	
+	//Desired direction
+	Set KpNorth to 10000. 
+	Set KiNorth to 0. 
+	Set KdNorth to 0. 
+	Set North_Min to -2.5. 
+	Set North_Max to 2.5. 
+	Set PIDNorth to PIDLOOP(KpNorth, KiNorth, KdNorth, North_Min, North_Max).// , PID_Min, PID_Max).//SET PID TO PIDLOOP(KP, KI, KD, MINOUTPUT, MAXOUTPUT).	
+
+
+//===LONGITUDE (East)====
+	//Desired velocity
+	Set KpLONG to 0.5. 
+	Set KiLONG to 0.0. 
+	Set KdLONG to 2.5. 
+	Set LONG_Min to -5/DegDistance. 
+	Set LONG_Max to 5/DegDistance. 
+	Set PIDLONG to PIDLOOP(KpLONG, KiLONG, KdLONG, LONG_Min, LONG_Max).// , PID_Min, PID_Max).//SET PID TO PIDLOOP(KP, KI, KD, MINOUTPUT, MAXOUTPUT).	
+		
+	//Desired direction	
+	Set KpEast to 10000. 
+	Set KiEast to 0. 
+	Set KdEast to 0. 
+	Set East_Min to -2.5. 
+	Set East_Max to 2.5. 
+	Set PIDEast to PIDLOOP(KpEast, KiEast, KdEast, East_Min, East_Max).// , PID_Min, PID_Max).//SET PID TO PIDLOOP(KP, KI, KD, MINOUTPUT, MAXOUTPUT).	
+	
+
+//	Set PIDThrott:SETPOINT to 0.
+//	Set PIDPitch:SETPOINT to 0.
+//	Set PIDYaw:SETPOINT to 0.
+	Set SteerDirection to UP + r(0,0,180). // r(pitch, yaw, roll) set roll to zero (intially pointing at 180 degress), this will allow pitch to equal Lat(North) direction required and Yaw(East) to equal Long direction required
+	Set lastLat to gl_shipLatLng:Lat.//inital set up
+	Set lastLng to gl_shipLatLng:Lng.//inital set up
+	Stage. // starts engine
+
+////// Climb///////
+	
+	Set PIDALT:SETPOINT to 50.0.
+	Set PIDLAT:Setpoint to gl_shipLatLng:Lat.
+	Set PIDLONG:Setpoint to gl_shipLatLng:Lng.
+	Until Timebase + 20 < TIME:SECONDS {
+
+		SET ALTSpeed TO PIDALT:UPDATE(TIME:SECONDS, gl_baseALTRADAR). //Get the PID on the AlT diff as desired vertical velocity
+		Set LATSpeed to PIDLAT:Update(TIME:SECONDS, gl_shipLatLng:Lat).//Get the PID on the Lat diff as desired lat degrees/sec
+		Set LONGSpeed to PIDLONG:UPDATE(TIME:SECONDS, gl_shipLatLng:Lng). //Get the PID on the Long diff as desired long degress/sec
+		
+		Set PIDThrott:SETPOINT to ALTSpeed. // Set the ALT diff PID as the desired vertical speed
+		Set PIDNorth:SETPOINT to LATSpeed.
+		Set PIDEast:SETPOINT to LONGSpeed. 
+		
+		Set NorthSpeed to (gl_shipLatLng:Lat - lastLat)/(TIME:SECONDS-lastdt).
+		Set EastSpeed to (gl_shipLatLng:Lng - lastLng)/(TIME:SECONDS-lastdt).
+		
+		SET ThrottSetting TO PIDThrott:UPDATE(TIME:SECONDS, verticalspeed). // PID the vertical velocity with the new desired speed
+		SET NorthDirection TO PIDNorth:UPDATE(TIME:SECONDS, NorthSpeed). // PID the North velocity with the new desired speed
+		SET EastDirection TO PIDEast:UPDATE(TIME:SECONDS, EastSpeed). // PID the East velocity with the new desired speed
+
+		Set SteerDirection to UP + r(-NorthDirection,-EastDirection,180). // r(pitch, yaw, roll) set roll to zero, this will allow pitch to equal Lat(North) direction required and Yaw(East) to equal Long direction required		
+		
+		
 		ClearScreen.
-		Print TIME:SECONDS - Timebase.
-		Print PIDThrot:KP.
-		Print PIDThrot:KI.
-		Print PIDThrot:KD.
-		Print PIDThrot:Error.
-		Print PIDThrot:CHANGERATE.
-		Print PIDThrot:ERRORSUM.
-		Print PIDThrot:INPUT.
-		Print PIDThrot:OUTPUT.
-		Print "P: " + PIDThrot:PTerm.
-		Print "I: " + PIDThrot:ITerm.
-		Print "D: " + PIDThrot:DTerm.		
+		Print "Climbing and hover".		
+		Print "Time Passed: " + (TIME:SECONDS - Timebase).
+		Print "===============================".
+		Print "Base: " + BaseLoc.
+		Print "===============================".		
+		Print "Lat: " + gl_shipLatLng:Lat.
+		Print "Lat diff: " + PIDLAT:Pterm/PIDLAT:KP.		
+		Print "PIDLAT Out: " + PIDLAT:OUTPUT.			
+		Print "Desired LATSpeed: " + LATSpeed.			
+		Print "NorthSpeed: " + NorthSpeed.
+		Print "NorthDirection: " + NorthDirection.		
+		Print "===============================".		
+		Print "Long: " + gl_shipLatLng:Lng.
+		Print "Long diff: " + PIDLONG:Pterm/PIDLONG:KP.
+		Print "PIDLONG Out: " + PIDLONG:OUTPUT.
+		Print "Desired LONGSpeed: " + LONGSpeed.
+		Print "EastSpeed: " + EastSpeed.		
+		Print "EastDirection: " + EastDirection.		
+		Print "===============================".	
+		Print "ALT Kp: " + PIDALT:Pterm.
+		Print "ALT Ki: " + PIDALT:Iterm.
+		Print "ALT Kd: " + PIDALT:Dterm.
+		Print "ALT Out: " + PIDALT:OUTPUT.
+		Print "===============================".
+		Print "Thrott Kp: " + PIDThrott:Pterm.
+		Print "Thrott Ki: " + PIDThrott:Iterm.
+		Print "Thrott Kd: " + PIDThrott:Dterm.
+		Print "Thrott Out: " + PIDThrott:OUTPUT.
+		Print "===============================".
 		//Print "Delta throttle: "+ dThrot.
-		Print "Setpoint ThrotSetting: "+ ThrotSetting.
-		Print "Radar" + tgt.
+		Print "Throttle Setting: "+ ThrottSetting.
+		Print "Radar" + gl_baseALTRADAR.
+		Print "Distance from Base: " + gs_distance(BaseLoc,gl_shipLatLng).
+		Print "Heading: " + ship:heading.
+		Print "Bearing: " + ship:bearing.
+		Print "True Bearing: " + gs_bearing(gl_shipLatLng,gl_NORTHPOLE).
 		// Switch to 0.
-		// LOG (TIME:SECONDS - Timebase) + "," + tgt + "," + ThrotSetting TO "testflight.csv".
+		// LOG (TIME:SECONDS - Timebase) + "," + verticalspeed + "," + ThrotSetting TO "testflight.csv".
 		// Switch to 1.
-		// Print "gl_InstMaxVertAcc:" + gl_InstMaxVertAcc.
-		// Print "gl_fallTime:" + gl_fallTime.
-		// Print "gl_fallVel:" + gl_fallVel.
-		// Print "gl_fallDist:" + gl_fallDist.
-		// Print "gl_fallBurnTime:" + gl_fallBurnTime.
-		// Print "gl_baseALTRADAR:" + gl_baseALTRADAR.
-		Wait 0.01.
+		Set lastLat to gl_shipLatLng:Lat.
+		Set lastLng to gl_shipLatLng:Lng.
+		Set lastdt to TIME:SECONDS.
+		Wait 0.1.
 	}
-	Print "Landing".
-	Until Ship:Status = "LANDED"{
-		Lock Throttle to 0.3.
+
+////// Move away///////
+	
+	Set PIDALT:SETPOINT to 100.0.
+	Set PIDLAT:Setpoint to TgtCoord:Lat.
+	Set PIDLONG:Setpoint to TgtCoord:Lng.
+	Until Timebase + 100 < TIME:SECONDS {
+		SET ALTSpeed TO PIDALT:UPDATE(TIME:SECONDS, gl_baseALTRADAR). //Get the PID on the AlT diff as desired vertical velocity
+		Set LATSpeed to PIDLAT:Update(TIME:SECONDS, gl_shipLatLng:Lat).//Get the PID on the Lat diff as desired lat degrees/sec
+		Set LONGSpeed to PIDLONG:UPDATE(TIME:SECONDS, gl_shipLatLng:Lng). //Get the PID on the Long diff as desired long degress/sec
+		
+		Set PIDThrott:SETPOINT to ALTSpeed. // Set the ALT diff PID as the desired vertical speed
+		Set PIDNorth:SETPOINT to LATSpeed.
+		Set PIDEast:SETPOINT to LONGSpeed. 
+		
+		Set NorthSpeed to (gl_shipLatLng:Lat - lastLat)/(TIME:SECONDS-lastdt).
+		Set EastSpeed to (gl_shipLatLng:Lng - lastLng)/(TIME:SECONDS-lastdt).
+		
+		SET ThrottSetting TO PIDThrott:UPDATE(TIME:SECONDS, verticalspeed). // PID the vertical velocity with the new desired speed
+		SET NorthDirection TO PIDNorth:UPDATE(TIME:SECONDS, NorthSpeed). // PID the North velocity with the new desired speed
+		SET EastDirection TO PIDEast:UPDATE(TIME:SECONDS, EastSpeed). // PID the East velocity with the new desired speed
+
+		Set SteerDirection to UP + r(-NorthDirection,-EastDirection,180). // r(pitch, yaw, roll) set roll to zero, this will allow pitch to equal Lat(North) direction required and Yaw(East) to equal Long direction required		
+			
+		
+		ClearScreen.
+		Print "Moving Away".		
+		Print "Time Passed: " + (TIME:SECONDS - Timebase).
+		Print "===============================".
+		Print "Tgt: " + TgtCoord.
+		Print "===============================".		
+		Print "Lat: " + gl_shipLatLng:Lat.
+		Print "Lat diff: " + PIDLAT:Pterm/PIDLAT:KP.		
+		Print "PIDLAT Out: " + PIDLAT:OUTPUT.			
+		Print "Desired LATSpeed: " + LATSpeed.			
+		Print "NorthSpeed: " + NorthSpeed.
+		Print "NorthDirection: " + NorthDirection.		
+		Print "===============================".		
+		Print "Long: " + gl_shipLatLng:Lng.
+		Print "Long diff: " + PIDLONG:Pterm/PIDLONG:KP.
+		Print "PIDLONG Out: " + PIDLONG:OUTPUT.
+		Print "Desired LONGSpeed: " + LONGSpeed.
+		Print "EastSpeed: " + EastSpeed.		
+		Print "EastDirection: " + EastDirection.		
+		Print "===============================".	
+		Print "ALT Kp: " + PIDALT:Pterm.
+		Print "ALT Ki: " + PIDALT:Iterm.
+		Print "ALT Kd: " + PIDALT:Dterm.
+		Print "ALT Out: " + PIDALT:OUTPUT.
+		Print "===============================".
+		Print "Thrott Kp: " + PIDThrott:Pterm.
+		Print "Thrott Ki: " + PIDThrott:Iterm.
+		Print "Thrott Kd: " + PIDThrott:Dterm.
+		Print "Thrott Out: " + PIDThrott:OUTPUT.
+		Print "===============================".
+		//Print "Delta throttle: "+ dThrot.
+		Print "Throttle Setting: "+ ThrottSetting.
+		Print "Radar" + gl_baseALTRADAR.
+		Print "Distance from Base: " + gs_distance(BaseLoc,gl_shipLatLng).
+		Print "Heading: " + ship:heading.
+		Print "Bearing: " + ship:bearing.
+		Print "True Bearing: " + gs_bearing(gl_shipLatLng,gl_NORTHPOLE).
+		// Switch to 0.
+		// LOG (TIME:SECONDS - Timebase) + "," + verticalspeed + "," + ThrotSetting TO "testflight.csv".
+		// Switch to 1.
+		Set lastLat to gl_shipLatLng:Lat.
+		Set lastLng to gl_shipLatLng:Lng.
+		Set lastdt to TIME:SECONDS.
+		Wait 0.1.
 	}
+
+////// Move back///////	
+	
+	Set PIDALT:SETPOINT to 50.0.
+	Set PIDLAT:Setpoint to BaseLoc:Lat.
+	Set PIDLONG:Setpoint to BaseLoc:Lng.
+	Until Timebase + 200 < TIME:SECONDS {
+		SET ALTSpeed TO PIDALT:UPDATE(TIME:SECONDS, gl_baseALTRADAR). //Get the PID on the AlT diff as desired vertical velocity
+		Set LATSpeed to PIDLAT:Update(TIME:SECONDS, gl_shipLatLng:Lat).//Get the PID on the Lat diff as desired lat degrees/sec
+		Set LONGSpeed to PIDLONG:UPDATE(TIME:SECONDS, gl_shipLatLng:Lng). //Get the PID on the Long diff as desired long degress/sec
+		
+		Set PIDThrott:SETPOINT to ALTSpeed. // Set the ALT diff PID as the desired vertical speed
+		Set PIDNorth:SETPOINT to LATSpeed.
+		Set PIDEast:SETPOINT to LONGSpeed. 
+		
+		Set NorthSpeed to (gl_shipLatLng:Lat - lastLat)/(TIME:SECONDS-lastdt).
+		Set EastSpeed to (gl_shipLatLng:Lng - lastLng)/(TIME:SECONDS-lastdt).
+		
+		SET ThrottSetting TO PIDThrott:UPDATE(TIME:SECONDS, verticalspeed). // PID the vertical velocity with the new desired speed
+		SET NorthDirection TO PIDNorth:UPDATE(TIME:SECONDS, NorthSpeed). // PID the North velocity with the new desired speed
+		SET EastDirection TO PIDEast:UPDATE(TIME:SECONDS, EastSpeed). // PID the East velocity with the new desired speed
+
+		Set SteerDirection to UP + r(-NorthDirection,-EastDirection,180). // r(pitch, yaw, roll) set roll to zero, this will allow pitch to equal Lat(North) direction required and Yaw(East) to equal Long direction required		
+				
+		
+		ClearScreen.
+		Print "Moving Back".		
+		Print "Time Passed: " + (TIME:SECONDS - Timebase).
+		Print "===============================".
+		Print "Tgt: " + TgtCoord.
+		Print "===============================".		
+		Print "Lat: " + gl_shipLatLng:Lat.
+		Print "Lat diff: " + PIDLAT:Pterm/PIDLAT:KP.		
+		Print "PIDLAT Out: " + PIDLAT:OUTPUT.			
+		Print "Desired LATSpeed: " + LATSpeed.			
+		Print "NorthSpeed: " + NorthSpeed.
+		Print "NorthDirection: " + NorthDirection.		
+		Print "===============================".		
+		Print "Long: " + gl_shipLatLng:Lng.
+		Print "Long diff: " + PIDLONG:Pterm/PIDLONG:KP.
+		Print "PIDLONG Out: " + PIDLONG:OUTPUT.
+		Print "Desired LONGSpeed: " + LONGSpeed.
+		Print "EastSpeed: " + EastSpeed.		
+		Print "EastDirection: " + EastDirection.		
+		Print "===============================".	
+		Print "ALT Kp: " + PIDALT:Pterm.
+		Print "ALT Ki: " + PIDALT:Iterm.
+		Print "ALT Kd: " + PIDALT:Dterm.
+		Print "ALT Out: " + PIDALT:OUTPUT.
+		Print "===============================".
+		Print "Thrott Kp: " + PIDThrott:Pterm.
+		Print "Thrott Ki: " + PIDThrott:Iterm.
+		Print "Thrott Kd: " + PIDThrott:Dterm.
+		Print "Thrott Out: " + PIDThrott:OUTPUT.
+		Print "===============================".
+		//Print "Delta throttle: "+ dThrot.
+		Print "Throttle Setting: "+ ThrottSetting.
+		Print "Radar" + gl_baseALTRADAR.
+		Print "Distance from Base: " + gs_distance(BaseLoc,gl_shipLatLng).
+		Print "Heading: " + ship:heading.
+		Print "Bearing: " + ship:bearing.
+		Print "True Bearing: " + gs_bearing(gl_shipLatLng,gl_NORTHPOLE).
+		// Switch to 0.
+		// LOG (TIME:SECONDS - Timebase) + "," + verticalspeed + "," + ThrotSetting TO "testflight.csv".
+		// Switch to 1.
+		Set lastLat to gl_shipLatLng:Lat.
+		Set lastLng to gl_shipLatLng:Lng.
+		Set lastdt to TIME:SECONDS.
+		Wait 0.1.
+	}	
+	
+	
+////// LAND///////	
+	
+	Set PIDALT:MAXOUTPUT to 10.
+	Set PIDALT:MINOUTPUT to -10.
+	Set PIDALT:SETPOINT to -0.3. // make negative so it actually touches down instead of hovering the last foot.
+	Set PIDLAT:Setpoint to gl_shipLatLng:Lat.
+	Set PIDLONG:Setpoint to gl_shipLatLng:Lng.
+	
+	Until Ship:Status = "Landed" {
+		SET ALTSpeed TO PIDALT:UPDATE(TIME:SECONDS, gl_baseALTRADAR). //Get the PID on the AlT diff as desired vertical velocity
+		Set LATSpeed to PIDLAT:Update(TIME:SECONDS, gl_shipLatLng:Lat).//Get the PID on the Lat diff as desired lat degrees/sec
+		Set LONGSpeed to PIDLONG:UPDATE(TIME:SECONDS, gl_shipLatLng:Lng). //Get the PID on the Long diff as desired long degress/sec
+		
+		Set PIDThrott:SETPOINT to ALTSpeed. // Set the ALT diff PID as the desired vertical speed
+		Set PIDNorth:SETPOINT to LATSpeed.
+		Set PIDEast:SETPOINT to LONGSpeed. 
+		
+		Set NorthSpeed to (gl_shipLatLng:Lat - lastLat)/(TIME:SECONDS-lastdt).
+		Set EastSpeed to (gl_shipLatLng:Lng - lastLng)/(TIME:SECONDS-lastdt).
+		
+		SET ThrottSetting TO PIDThrott:UPDATE(TIME:SECONDS, verticalspeed). // PID the vertical velocity with the new desired speed
+		SET NorthDirection TO PIDNorth:UPDATE(TIME:SECONDS, NorthSpeed). // PID the North velocity with the new desired speed
+		SET EastDirection TO PIDEast:UPDATE(TIME:SECONDS, EastSpeed). // PID the East velocity with the new desired speed
+
+		Set SteerDirection to UP + r(-NorthDirection,-EastDirection,180). // r(pitch, yaw, roll) set roll to zero, this will allow pitch to equal Lat(North) direction required and Yaw(East) to equal Long direction required		
+			
+		
+		ClearScreen.
+		Print "Landing".		
+		Print "Time Passed: " + (TIME:SECONDS - Timebase).
+		Print "===============================".
+		Print "Base: " + BaseLoc.
+		Print "===============================".		
+		Print "Lat: " + gl_shipLatLng:Lat.
+		Print "Lat diff: " + PIDLAT:Pterm/PIDLAT:KP.		
+		Print "PIDLAT Out: " + PIDLAT:OUTPUT.			
+		Print "Desired LATSpeed: " + LATSpeed.			
+		Print "NorthSpeed: " + NorthSpeed.
+		Print "NorthDirection: " + NorthDirection.		
+		Print "===============================".		
+		Print "Long: " + gl_shipLatLng:Lng.
+		Print "Long diff: " + PIDLONG:Pterm/PIDLONG:KP.
+		Print "PIDLONG Out: " + PIDLONG:OUTPUT.
+		Print "Desired LONGSpeed: " + LONGSpeed.
+		Print "EastSpeed: " + EastSpeed.		
+		Print "EastDirection: " + EastDirection.		
+		Print "===============================".	
+		Print "ALT Kp: " + PIDALT:Pterm.
+		Print "ALT Ki: " + PIDALT:Iterm.
+		Print "ALT Kd: " + PIDALT:Dterm.
+		Print "ALT Out: " + PIDALT:OUTPUT.
+		Print "===============================".
+		Print "Thrott Kp: " + PIDThrott:Pterm.
+		Print "Thrott Ki: " + PIDThrott:Iterm.
+		Print "Thrott Kd: " + PIDThrott:Dterm.
+		Print "Thrott Out: " + PIDThrott:OUTPUT.
+		Print "===============================".
+		//Print "Delta throttle: "+ dThrot.
+		Print "Throttle Setting: "+ ThrottSetting.
+		Print "Radar" + gl_baseALTRADAR.
+		Print "Distance from Base: " + gs_distance(BaseLoc,gl_shipLatLng).
+		Print "Heading: " + ship:heading.
+		Print "Bearing: " + ship:bearing.
+		Print "True Bearing: " + gs_bearing(gl_shipLatLng,gl_NORTHPOLE).
+		// Switch to 0.
+		// LOG (TIME:SECONDS - Timebase) + "," + verticalspeed + "," + ThrotSetting TO "testflight.csv".
+		// Switch to 1.
+		Set lastLat to gl_shipLatLng:Lat.
+		Set lastLng to gl_shipLatLng:Lng.
+		Set lastdt to TIME:SECONDS.
+		Wait 0.1.
+	}
+
+	
+	Set ThrottSetting to 0.0.
 	Set SHIP:CONTROL:PILOTMAINTHROTTLE to 0.0.
 	Print "Landed".
-	Wait 0.1.
+	Wait 3.
 	gf_set_runmode("runMode",-1).
 	
 } /// end of function runmodes
+
+	declare function gs_distance {
+    declare parameter gs_p1, gs_p2. //(point1,point2). Need to ensure converted to radians
+	Set P1Lat to gs_p1:lat * constant:DegtoRad.
+	Set P2Lat to gs_p2:lat * constant:DegtoRad.
+	Set P1Lng to gs_p1:lng * constant:DegtoRad.
+	Set P2Lng to gs_p2:lng * constant:DegtoRad.
+    set resultA to 	sin((P1Lat-P2Lat)/2)^2 + 
+					cos(P1Lat)*cos(P2Lat)*
+					sin((P1Lng-P2Lng)/2)^2.
+	set resultB to 2*arctan2(sqrt(resultA),sqrt(1-resultA)).
+    set result to body:radius*resultB. // this is the "Haversine" formula go to www.moveable-type.co.uk for more information
+	
+	// set resultA to 	sin((gs_p1:lat-gs_p2:lat)/2)^2 + 
+					// cos(gs_p1:lat)*cos(gs_p2:lat)*
+					// sin((gs_p1:lng-gs_p2:lng)/2)^2.
+	// set resultB to 2*arctan2(sqrt(resultA),sqrt(1-resultA)).
+    // set result to body:radius*resultB. // this is the "Haversine" formula go to www.moveable-type.co.uk for more information
+    return result.
+    }
+	
+	declare function gs_bearing {
+    declare parameter gs_p1, gs_p2. //(point1,point2). Need to ensure converted to radians
+	Set P1Lat to gs_p1:lat * constant:DegtoRad.
+	Set P2Lat to gs_p2:lat * constant:DegtoRad.
+	Set P1Lng to gs_p1:lng * constant:DegtoRad.
+	Set P2Lng to gs_p2:lng * constant:DegtoRad.
+	
+	set resultA to (cos(P1Lat)*sin(P2Lat)) -(sin(P1Lat)*cos(P2Lat)*cos(P2Lng-P1Lng)).
+	set resultB to sin(P2Lng-P1Lng)*cos(P2Lat).
+    set result to  arctan2(resultA, resultB).// this is the intial bearing formula go to www.moveable-type.co.uk for more informationn
+	
+	
+    // set resultA to (cos(gs_p1:lat)*sin(gs_p2:lat)) -(sin(gs_p1:lat)*cos(gs_p2:lat)*cos(gs_p2:lng-gs_p1:lng)).
+	// set resultB to sin(gs_p2:lng-gs_p1:lng)*cos(gs_p2:lat).
+    // set result to  arctan2(resultA, resultB).// this is the intial bearing formula go to www.moveable-type.co.uk for more informationn
+    return result.
+    }
 
 	
 Function intParameters {

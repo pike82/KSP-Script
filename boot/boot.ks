@@ -11,7 +11,7 @@
 @LAZYGLOBAL OFF. //Turns off auto global call of parameters and prevents verbose errors where calling recursive functions
 
 WAIT 5. //ensures all game physiscs have loaded
-SET SHIP:CONTROL:MAINTHROTTLE TO 0. // ensures no active throttle unless specified later
+SET SHIP:CONTROL:PILOTMAINTHROTTLE TO 0. // ensures no active throttle unless specified later
 // open up the KOS terminal
 
 CORE:PART:GETMODULE("kOSProcessor"):DOEVENT("Open Terminal").
