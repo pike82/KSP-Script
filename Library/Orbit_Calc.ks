@@ -18,7 +18,8 @@ local Hill_Climb is import("Hill_Climb").
 		"Find_AN_UT", ff_Find_AN_UT@,
 		"TAr", ff_TAr@,
 		"TAtimeFromPE", ff_TAtimeFromPE@,
-		"quadraticMinus", ff_quadraticMinus@
+		"quadraticMinus", ff_quadraticMinus@,
+		"quadraticPlus", ff_quadraticPlus@
     ).
 
 ////////////////////////////////////////////////////////////////
@@ -160,6 +161,11 @@ function ff_quadraticMinus {
 	return (-b - sqrt(max(b ^ 2 - 4 * a * c, 0))) / (2 * a).
 }
 
+function ff_quadraticPlus {
+	parameter a, b, c.
+	return (b - sqrt(max(b ^ 2 - 4 * a * c, 0))) / (2 * a).
+}
+
 ////////////////////////////////////////////////////////////////
 //Helper Functions
 ////////////////////////////////////////////////////////////////
@@ -215,11 +221,6 @@ function hf_MeanAnom {
 	local MA is EccAnom - ecc * sin(EccAnom).
 	//Print "MeanAnom:" + MA.
 	return MA. //Mean Anomoly in EccAnom input(radians or degrees)
-}
-
-function hf_quadraticPlus {
-	parameter a, b, c.
-	return (b - sqrt(max(b ^ 2 - 4 * a * c, 0))) / (2 * a).
 }
 
 function hf_normalvector{
