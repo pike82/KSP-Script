@@ -213,7 +213,7 @@ Function intParameters {
 	Lock gl_fallTime to Orbit_Calc["quadraticMinus"](gl_GRAVITY, ship:verticalspeed, gl_baseALTRADAR).//r = r0 + vt - 1/2at^2 ===> Quadratic equiation at2^2 + bt + c = 0 a= acceleration, b=velocity, c= distance
 	lock gl_fallVel to ship:verticalspeed + (gl_GRAVITY*gl_fallTime).//v = u + at
 	lock gl_fallDist to ship:verticalspeed^2 / (2*gl_InstMaxVertAcc). // v^2 = u^2 + 2as ==> s = ((v^2) - (u^2))/2a
-	Lock gl_fallBurnTime to Node_Calc["burn_time"](gl_fallVel). 
+
 	
 	//Instantaneous Predictions and variables
 	lock gl_InstConImpactTime to gl_baseALTRADAR / abs(VERTICALSPEED). //gives instantaneous time to impact if vertical velocity remains constant

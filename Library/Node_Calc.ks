@@ -10,7 +10,7 @@
     local Node_Calc is lex(
 		"Node_exec", ff_Node_exec@,
 		"burn_time", ff_burn_time@,
-		"Mass_Change", ff_Mass_Change@
+		"Mdot", ff_mdot@
     ).
 
 ////////////////////////////////////////////////////////////////
@@ -86,8 +86,7 @@ set thrust to thrust * 1000. // Engine Thrust (kg * m/s²)
 return g * m * isp * (1 - e^(-dV/(g*isp))) / thrust.
 }/// End Function
 	
-function ff_Mass_Change {
-parameter time.
+function ff_mdot {
 local g is 9.81.  // Gravitational acceleration constant used in game for Isp Calculation (m/s²)
 local engine_count is 0.
 local thrust is 0.
@@ -100,7 +99,7 @@ for en in all_engines if en:ignition and not en:flameout {
 }
 set isp to isp / engine_count.
 set thrust to thrust * 1000. // Engine Thrust (kg * m/s²)
-return (thrust/(g * isp))*time. //kg of change
+return (thrust/(g * isp)). //kg of change
 }/// End Function
 	
 	

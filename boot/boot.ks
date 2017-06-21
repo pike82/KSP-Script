@@ -74,7 +74,7 @@ LOCAL newMission TO SHIP:NAME + ".mission.ks".
 LOCAL newUpdate TO SHIP:NAME + ".update.ks".
   
 // Check connection and ensure a mission file and Knu file is present in the first boot up.
-IF ADDONS:RT:HASCONNECTION(SHIP) or ADDONS:RT:HASLOCALCONTROL(SHIP) {  //See if there is a connection
+IF ADDONS:RT:HASCONNECTION(SHIP) or ADDONS:RT:HASLOCALCONTROL(SHIP) or ADDONS:AVAILABLE("RT")=False {  //See if there is a connection
 	Print ("==INITIALISATION FILE CHECKS==").
 	Print ("Checking for knu file").
 	If not exists (knu.ks){
