@@ -10,7 +10,8 @@
     local Node_Calc is lex(
 		"Node_exec", ff_Node_exec@,
 		"burn_time", ff_burn_time@,
-		"Mdot", ff_mdot@
+		"Mdot", ff_mdot@,
+		"User_Node_exec", ff_user_Node_exec@
     ).
 
 ////////////////////////////////////////////////////////////////
@@ -85,6 +86,8 @@ set isp to isp / engine_count.
 set thrust to thrust * 1000. // Engine Thrust (kg * m/s²)
 return g * m * isp * (1 - e^(-dV/(g*isp))) / thrust.
 }/// End Function
+
+///////////////////////////////////////////////////////////////////////////////////	
 	
 function ff_mdot {
 local g is 9.81.  // Gravitational acceleration constant used in game for Isp Calculation (m/s²)
@@ -102,7 +105,52 @@ set thrust to thrust * 1000. // Engine Thrust (kg * m/s²)
 return (thrust/(g * isp)). //kg of change
 }/// End Function
 	
+///////////////////////////////////////////////////////////////////////////////////	
+
+function ff_user_Node_exec {
+	Clearscreen.
+	local firstloop is 1.	
+	local secloop is 1.
+	Until firstloop = 0{
+		Print "Please Create a User node: To execute the node press 1, to Skip press 0".
+		Set termInput to terminal:input:getchar().
+		//Wait until terminal:input:haschar.
+		if termInput = 0 {
+			Set firstloop to 0.
+		}
+		else if termInput = 1{
+			If hasnode{
+				ff_Node_exec().
+				until secLoop = 0{
+					Print "Do you wish to create another node Y/N?".
+					Set termInput to terminal:input:getchar().
+					//Wait until terminal:input:haschar.
+					If termInput = "Y"{
+						Set firstloop to 1.
+					}
+					If Else = "N"{
+						Set firstloop to 0.
+						Set secloop to 0.
+					}
+					Else{
+						Print "Please enter a valid selction".
+					}
+				}
+			}
+			Else{
+				Print "Please make a node!!!".
+			}
+		}
+		Else {
+			Print "Please enter a valid selction".
+		}
+		Wait 0.01.
+	}//end untill
 	
+	
+	
+	
+}/// End Function	
 
 ///////////////////////////////////////////////////////////////////////////////////
 //Export list of functions that can be called externally for the mission file	to use

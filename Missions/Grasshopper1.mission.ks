@@ -4,7 +4,6 @@ Print "Old Config:IPU Setting:" + Config:IPU.
 Set Config:IPU to 1500.// this needs to be set based on the maximum number of processes happening at once, usually 500 is enought unless its going to be a very heavy script
 Print "New Config:IPU Setting:" + Config:IPU.
 Set Config:Stat to false.
-
 	
 LIST PROCESSORS IN ALL_PROCESSORS.
 
@@ -43,236 +42,36 @@ PRINT ("Downloading libraries").
 	local Orbit_Calc is import("Orbit_Calc").
 	local Node_Calc is import("Node_Calc").
 	local landing is import("Landing_vac").
+	local ORBManu is import("ORBManu").
 	
 intParameters().
 Print runMode["runMode"].
 
 Function Mission_runModes{
-	Set Timebase to TIME:SECONDS. 
-	Print "Timebase" + Timebase.
-	Set BaseLoc to gl_shipLatLng.
-	Set BaseHeight to gl_surfaceElevation.
-	Set BasePress to Ship:sensors:pres.
-	Set SteerDirection to HEADING(90,90).///HEADING(compass, pitch)
-	LOCK STEERING TO SteerDirection.
-	Set ThrottSetting to 0.0.
-	Lock Throttle to ThrottSetting.
-	Set TgtCoord to latlng(BaseLoc:lat, BaseLoc:lng).
-	Set lastdt to TIME:SECONDS.
-
-	//Set NorthVec to 
-	//Set EastVec to 
-	
-	Set SteerDirection to UP + r(0,0,180). // r(pitch, yaw, roll) set roll to zero (intially pointing at 180 degress), this will allow pitch to equal Lat(North) direction required and Yaw(East) to equal Long direction required
-	Set lastLat to gl_shipLatLng:Lat.//inital set up
-	Set lastLng to gl_shipLatLng:Lng.//inital set up
-	Stage. // starts engine
-
-////// Climb///////
-	
-	// Set sv_PIDALT:SETPOINT to 1000.
-	// Set sv_PIDLAT:Setpoint to gl_shipLatLng:Lat.
-	// Set sv_PIDLONG:Setpoint to gl_shipLatLng:Lng.
-	// Until Timebase + 60 < TIME:SECONDS {
-		// PIDControlLoop().
-		// Wait 0.1.
-	// }
-
-////// Move away///////
-	
-	Set sv_PIDALT:SETPOINT to 1000.
-	Set sv_PIDLAT:Setpoint to TgtCoord:Lat.
-	Set sv_PIDLONG:Setpoint to TgtCoord:Lng.
-	Until Timebase + 90 < TIME:SECONDS {
-		PIDControlLoop().
-		Wait 0.1.
+Stage. //load engines
+		
+	if runMode["runMode"] = 0.1 { 
+		Print "Run mode is:" + runMode["runMode"].
+		Node_Calc["User_Node_exec"]().
+		gf_set_runmode("runMode",1.0).
+		wait 5.
 	}
-
-////// Move back///////	
 	
-	// Set sv_PIDALT:SETPOINT to 50.0.
-	// Set sv_PIDLAT:Setpoint to BaseLoc:Lat.
-	// Set sv_PIDLONG:Setpoint to BaseLoc:Lng.
-	// Until Timebase + 200 < TIME:SECONDS {
-		// PIDControlLoop().
-		// Wait 0.1.
-	// }	
-	
-	
-////// LAND///////	
-
-//suicide burn
-Print "Suicide burn Start".
-
-Set ThrottSetting to 0.0.
-Wait 0.2.
-Print gl_fallDist.
-Print gl_baseALTRADAR.
-Set SteerDirection to HEADING(90,90).
-until false {
-	Clearscreen.
-	Print "===============================".
-	Print "Base fall time: " + sqrt((2*gl_baseALTRADAR)/(gl_GRAVITY)).
-	Print "Fall time: " + gl_fallTime.	
-	Print "Fall time alt: " + gl_fallTimealt.	
-	Print "Fall vel: " + gl_fallVel.
-	Print "Fall dist: " + gl_fallDist.
-	Print "Fall burn time: " + Node_Calc["burn_time"](gl_fallVel).
-	Print "Avg fall acceleration: " + gl_fallAcc.
-	Print "Max Accel: " + (ship:AVAILABLETHRUST/ship:mass).
-	Print "min Accel: " + ship:AVAILABLETHRUSTat(BasePress*constant:KPaToAtm)/(ship:mass).		
-	Print "Radar: " + gl_baseALTRADAR.
-	Print "Start Distance: " + (gl_baseALTRADAR - gl_fallDist).
-
-	//If (20.9) > (gl_baseALTRADAR){
-	If (gl_fallDist) > (gl_baseALTRADAR - 0.1*abs(verticalspeed)){ // 0.08 to allow for pysics tick and engine start delay.
-		Print "Breaking".
-	Break.
+	else if runMode["runMode"] = 1.0 { 
+		Print "Run mode is:" + runMode["runMode"].
+		landing["CABLand"]().
+		gf_set_runmode("runMode",1.1).
+		wait 5.
 	}
-	Wait 0.01.
-}
-Print "Waiting for landing".
-
-	Until (Ship:Status = "Landed") {//or (gl_baseALTRADAR < 0.3) {
-		Set ThrottSetting to 1.0.
-		Wait 0.01.
+	else if runMode["runMode"] = 1.1 { 
+		Print "Run mode is:" + runMode["runMode"].
+		landing["HoverLand"]().
+		gf_set_runmode("runMode",1.2).
+		wait 5.
 	}
-
-
-//Controlled descent
-
-	
-	// Set PIDALT:MAXOUTPUT to 10.
-	// Set PIDALT:MINOUTPUT to -10.
-	// Set PIDALT:SETPOINT to -0.3. // make negative so it actually touches down instead of hovering the last foot.
-	// Set PIDLAT:Setpoint to gl_shipLatLng:Lat.
-	// Set PIDLONG:Setpoint to gl_shipLatLng:Lng.
-	
-	// Until Ship:Status = "Landed" {
-		// PIDControlLoop().
-		// Wait 0.1.
-	// }
-
-	
-	Set ThrottSetting to 0.0.
-	Set SHIP:CONTROL:PILOTMAINTHROTTLE to 0.0.
-	Print "Landed".
-	Wait 3.
-	gf_set_runmode("runMode",-1).
 	
 } /// end of function runmodes
 
-	declare function gs_distance {
-    declare parameter gs_p1, gs_p2. //(point1,point2). 
-	//Need to ensure converted to radians TODO Test if this still works in degrees
-	Set P1Lat to gs_p1:lat * constant:DegtoRad.
-	Set P2Lat to gs_p2:lat * constant:DegtoRad.
-	Set P1Lng to gs_p1:lng * constant:DegtoRad.
-	Set P2Lng to gs_p2:lng * constant:DegtoRad.
-    set resultA to 	sin((P1Lat-P2Lat)/2)^2 + 
-					cos(P1Lat)*cos(P2Lat)*
-					sin((P1Lng-P2Lng)/2)^2.
-	set resultB to 2*arctan2(sqrt(resultA),sqrt(1-resultA)).
-    set result to body:radius*resultB. // this is the "Haversine" formula go to www.moveable-type.co.uk for more information
-	
-	// set resultA to 	sin((gs_p1:lat-gs_p2:lat)/2)^2 + 
-					// cos(gs_p1:lat)*cos(gs_p2:lat)*
-					// sin((gs_p1:lng-gs_p2:lng)/2)^2.
-	// set resultB to 2*arctan2(sqrt(resultA),sqrt(1-resultA)).
-    // set result to body:radius*resultB. // this is the "Haversine" formula go to www.moveable-type.co.uk for more information
-    return result.
-    }
-	
-	declare function gs_bearing {
-    declare parameter gs_p1, gs_p2. //(point1,point2). 
-	//Need to ensure converted to radians TODO Test if this still works in degrees
-	Set P1Lat to gs_p1:lat * constant:DegtoRad.
-	Set P2Lat to gs_p2:lat * constant:DegtoRad.
-	Set P1Lng to gs_p1:lng * constant:DegtoRad.
-	Set P2Lng to gs_p2:lng * constant:DegtoRad.
-	
-	set resultA to (cos(P1Lat)*sin(P2Lat)) -(sin(P1Lat)*cos(P2Lat)*cos(P2Lng-P1Lng)).
-	set resultB to sin(P2Lng-P1Lng)*cos(P2Lat).
-    set result to  arctan2(resultA, resultB).// this is the intial bearing formula go to www.moveable-type.co.uk for more informationn
-	
-	
-    // set resultA to (cos(gs_p1:lat)*sin(gs_p2:lat)) -(sin(gs_p1:lat)*cos(gs_p2:lat)*cos(gs_p2:lng-gs_p1:lng)).
-	// set resultB to sin(gs_p2:lng-gs_p1:lng)*cos(gs_p2:lat).
-    // set result to  arctan2(resultA, resultB).// this is the intial bearing formula go to www.moveable-type.co.uk for more informationn
-    return result.
-    }
-
-Function PIDControlLoop{
-	SET ALTSpeed TO PIDALT:UPDATE(TIME:SECONDS, gl_baseALTRADAR). //Get the PID on the AlT diff as desired vertical velocity
-	Set LATSpeed to PIDLAT:Update(TIME:SECONDS, gl_shipLatLng:Lat).//Get the PID on the Lat diff as desired lat degrees/sec
-	Set LONGSpeed to PIDLONG:UPDATE(TIME:SECONDS, gl_shipLatLng:Lng). //Get the PID on the Long diff as desired long degress/sec
-	
-	Set PIDThrott:SETPOINT to ALTSpeed. // Set the ALT diff PID as the desired vertical speed
-	Set PIDNorth:SETPOINT to LATSpeed.
-	Set PIDEast:SETPOINT to LONGSpeed. 
-	
-	Set NorthSpeed to (gl_shipLatLng:Lat - lastLat)/(TIME:SECONDS-lastdt).
-	Set EastSpeed to (gl_shipLatLng:Lng - lastLng)/(TIME:SECONDS-lastdt).
-	
-	SET ThrottSetting TO PIDThrott:UPDATE(TIME:SECONDS, verticalspeed). // PID the vertical velocity with the new desired speed
-	SET NorthDirection TO PIDNorth:UPDATE(TIME:SECONDS, NorthSpeed). // PID the North velocity with the new desired speed
-	SET EastDirection TO PIDEast:UPDATE(TIME:SECONDS, EastSpeed). // PID the East velocity with the new desired speed
-
-	Set SteerDirection to UP + r(-NorthDirection,-EastDirection,180). // r(pitch, yaw, roll) set roll to zero, this will allow pitch to equal Lat(North) direction required and Yaw(East) to equal Long direction required		
-		
-	
-	ClearScreen.
-	Print "Landing".		
-	Print "Time Passed: " + (TIME:SECONDS - Timebase).
-	Print "===============================".
-	Print "Base: " + BaseLoc.
-	Print "===============================".		
-	Print "Lat: " + gl_shipLatLng:Lat.
-	Print "Lat diff: " + PIDLAT:Pterm/PIDLAT:KP.		
-	Print "PIDLAT Out: " + PIDLAT:OUTPUT.			
-	Print "Desired LATSpeed: " + LATSpeed.			
-	Print "NorthSpeed: " + NorthSpeed.
-	Print "NorthDirection: " + NorthDirection.		
-	Print "===============================".		
-	Print "Long: " + gl_shipLatLng:Lng.
-	Print "Long diff: " + PIDLONG:Pterm/PIDLONG:KP.
-	Print "PIDLONG Out: " + PIDLONG:OUTPUT.
-	Print "Desired LONGSpeed: " + LONGSpeed.
-	Print "EastSpeed: " + EastSpeed.		
-	Print "EastDirection: " + EastDirection.		
-	Print "===============================".	
-	Print "ALT Kp: " + PIDALT:Pterm.
-	Print "ALT Ki: " + PIDALT:Iterm.
-	Print "ALT Kd: " + PIDALT:Dterm.
-	Print "ALT Out: " + PIDALT:OUTPUT.
-	Print "===============================".
-	Print "Thrott Kp: " + PIDThrott:Pterm.
-	Print "Thrott Ki: " + PIDThrott:Iterm.
-	Print "Thrott Kd: " + PIDThrott:Dterm.
-	Print "Thrott Out: " + PIDThrott:OUTPUT.
-	Print "===============================".
-	//Print "Delta throttle: "+ dThrot.
-	Print "Throttle Setting: "+ ThrottSetting.
-	Print "Radar" + gl_baseALTRADAR.
-	Print "Distance from Base: " + gs_distance(BaseLoc,gl_shipLatLng).
-	Print "Heading: " + ship:heading.
-	Print "Bearing: " + ship:bearing.
-	Print "True Bearing: " + gs_bearing(gl_shipLatLng,gl_NORTHPOLE).
-	Print "===============================".
-	Print "Base fall time: " + sqrt((2*gl_baseALTRADAR)/(gl_GRAVITY)).
-	Print "Fall time: " + gl_fallTime.	
-	Print "Fall time alt: " + gl_fallTimealt.	
-	Print "Fall vel: " + gl_fallVel.
-	Print "Fall dist: " + gl_fallDist.
-	Print "Fall burn time: " + Node_Calc["burn_time"](gl_fallVel).
-	Print "Max fall acceleration: " +gl_fallAcc.
-	// Switch to 0.
-	// LOG (TIME:SECONDS - Timebase) + "," + verticalspeed + "," + ThrotSetting TO "testflight.csv".
-	// Switch to 1.
-	Set lastLat to gl_shipLatLng:Lat.
-	Set lastLng to gl_shipLatLng:Lng.
-	Set lastdt to TIME:SECONDS.
-}
 	
 Function intParameters {
 	
@@ -299,7 +98,7 @@ Function intParameters {
 	//////////////////////////////////////////
 	///Ship PID Control variables//////////////////
 	/////////////////////////////////////////
-	
+	Lock gl_DegDistance to (body:radius*2*constant:pi)/360.
 //===ALTITUDE====
 	//Desired vertical speed
 	Set sv_PIDALT to PIDLOOP(0.9, 0.0, 0.0005, -10, 10).//SET PID TO PIDLOOP(KP, KI, KD, MINOUTPUT, MAXOUTPUT).	
@@ -310,13 +109,13 @@ Function intParameters {
 	//Desired velocity
 	Set sv_PIDLAT to PIDLOOP(1.0, 0.0, 5.0, 5/gl_DegDistance, -5/gl_DegDistance).//SET PID TO PIDLOOP(KP, KI, KD, MINOUTPUT, MAXOUTPUT).	
 	//Desired direction
-	Set sv_PIDNorth to PIDLOOP(10000, 0, 0, -2.5, 2.5).// SET PID TO PIDLOOP(KP, KI, KD, MINOUTPUT, MAXOUTPUT).	
+	Set sv_PIDNorth to PIDLOOP(10000, 0, 0, -22.5, 22.5).// SET PID TO PIDLOOP(KP, KI, KD, MINOUTPUT, MAXOUTPUT).	
 
 //===LONGITUDE (East)====
 	//Desired velocity
 	Set sv_PIDLONG to PIDLOOP(0.5, 0, 2.5, -5/gl_DegDistance, 5/gl_DegDistance).// SET PID TO PIDLOOP(KP, KI, KD, MINOUTPUT, MAXOUTPUT).			
 	//Desired direction	 
-	Set PIDEast to PIDLOOP(10000, 0, 0, -2.5, 2.5).//SET PID TO PIDLOOP(KP, KI, KD, MINOUTPUT, MAXOUTPUT).	
+	Set sv_PIDEast to PIDLOOP(10000, 0, 0, -22.5, 22.5).//SET PID TO PIDLOOP(KP, KI, KD, MINOUTPUT, MAXOUTPUT).	
 	
 	
 	///////////////////////
@@ -330,7 +129,7 @@ Function intParameters {
 	lock gl_Ship_Ap to Ship:orbit:Apoapsis.
 	lock gl_Ship_Pe to Ship:orbit:Periapsis.
 	lock gl_Ship_Per to Ship:orbit:Period.
-	lock gl_GRAVITY to body:mu / (altitude + body:radius)^2. //returns the current gravity experienced by the vessel
+	lock gl_GRAVITY to body:mu / (ship:Altitude + body:radius)^2. //returns the current gravity experienced by the vessel
 	Lock gl_Mdot to Node_Calc["Mdot"]().
 	
 	//Locations
@@ -339,7 +138,6 @@ Function intParameters {
 	lock gl_shipLatLng to SHIP:GEOPOSITION. // provides the current co-ordiantes
 	lock gl_surfaceElevation to gl_shipLatLng:TERRAINHEIGHT. // provides the height at the current co-ordinates
 	lock gl_PeLatLng to ship:body:geopositionof(positionat(ship, time:seconds + gl_perEta)). //The Lat and long of the PE
-	Lock gl_DegDistance to (body:radius*2*constant:pi)/360.
 
 	//Engines
     lock gl_TWR to MAX( 0.001, MAXTHRUST / (ship:MASS*gl_GRAVITY)). //Provides the current thrust to weight ratio
@@ -349,8 +147,8 @@ Function intParameters {
 	
 	//Ship information
 	Lock gl_StageNo TO STAGE:NUMBER. //Get the Current Stage Number
-	lock gl_baseALTRADAR to max( 0.1, min(ALTITUDE , ALTITUDE - gl_surfaceElevation - gl_shipHeight)). // Note: this assumes the root part is on the top of the ship.
-	lock gl_shipHeight to Altitude - gl_surfaceElevation.	// calculates the height of the ship if landed, if not landed use the flight variable or set one up seperately	
+	lock gl_baseALTRADAR to max( 0.1, min(ship:Altitude , ship:Altitude - gl_surfaceElevation - sv_shipHeightflight)). // Note: this assumes the root part is on the top of the ship.
+	lock gl_shipHeight to ship:Altitude - gl_surfaceElevation.	// calculates the height of the ship if landed, if not landed use the flight variable or set one up seperately	
 	
 	//Fall Predictions and Variables
 	Lock gl_AvgGravity to sqrt(		(	(gl_GRAVITY^2) +((body:mu / (gl_surfaceElevation + body:radius)^2 )^2)		)/2		).// using Root mean square function to find the average aceleration between the current point and the surface which have a squares relationship.

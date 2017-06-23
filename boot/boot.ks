@@ -112,7 +112,7 @@ until runMode["runMode"] = -1 {
 		Print "CPU Space Capacity: " + core:currentvolume:Capacity.
 		Print "Free CPU Space: " + core:currentvolume:FreeSpace.
 		Print "CPU Power Drain: " + core:currentvolume:Powerrequirement.
-		wait 0.1.
+		wait 0.01.
 		Set bootTime to TIME:SECONDS.
 	}
 	//Print ("Run modes in boot loop").

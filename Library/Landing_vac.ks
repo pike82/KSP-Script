@@ -55,54 +55,67 @@ Function ff_CABLand{
 	
 	Set PePos to positionat(Ship, gl_perEta + TIME:SECONDS).
 	Set ShipPeUpVec to PePos - body:position.
-	Set PEVel to velocityat(Ship, gl_perEta + TIME:SECONDS):Surface.
+	Set PEVec to velocityat(Ship, gl_perEta + TIME:SECONDS):Surface.
 	//horz
-	Set PeHorzVel to vxcl(ShipPeUpVec:normalized, PEVel):mag.
+	Set PeHorzVel to PEVec:mag. // its known at PE the verVel is Zero so all velocity must be horizontal
 	//Vertical
-	Set PeVerVel to vdot(ShipPeUpVec:normalized, PEVel):mag.
+	Set PeVerVel to 0. // its known at PE the verVel is Zero
 	Set PeVerBurnDist to Orbit:Periapsis - (gl_PeLatLng:TERRAINHEIGHT + SafeAlt). 
-	Set PeAvgGravity to sqrt(		(	(body:mu / (Orbit:Periapsis+ALTITUDE)^2) +((body:mu / (gl_PeLatLng:TERRAINHEIGHT + body:radius)^2 )^2)		)/2		).// Root Mean square method
+	Set PeAvgGravity to sqrt(		(	(body:mu / (Orbit:Periapsis + body:radius)^2) +((body:mu / (gl_PeLatLng:TERRAINHEIGHT + body:radius)^2 )^2)		)/2		).// Root Mean square method
 	Set PeFallTime to Orbit_Calc["quadraticPlus"](-PeAvgGravity/2, -PeVerVel, PeVerBurnDist).//r = r0 + vt - 1/2at^2 ===> Quadratic equiation 1/2*at^2 + bt + c = 0 a= acceleration, b=velocity, c= distance
 	Set PeFallVel to abs(PeVerVel) + (PeAvgGravity*PeFallTime).//v = u + at
 	//times
 	Set HorzBurnTime to Node_Calc["burn_time"](PeHorzVel).
 	Set VerBurnTime to Node_Calc["burn_time"](PeFallVel).
 	Set totalBurnTime to HorzBurnTime + VerBurnTime.
-	
+		
 	Until gl_perEta < HorzBurnTime {
 	lock steering to lookdirup(-ship:velocity:surface, gl_Top). //point retrograde
+		Clearscreen.
+		Print PeHorzVel.
+		Print PeVerBurnDist.
+		Print PeFallTime.
+		Print HorzBurnTime.
+		Print VerBurnTime.
+		Print totalBurnTime.
+		Print gl_perEta.
 		wait 0.01.
-		ClearScreen.
-		Print "Waiting For Burn Start".
 	}
-	
+	Print "Starting CAB".
 	Set Start_burn_time to time:seconds.
 	Set HorzBurnTimeEta to HorzBurnTime + Start_burn_time.
-	
-	Until time:seconds < HorzBurnTimeEta{
+	Set TotBurnTimeEta to HorzBurnTime + Start_burn_time.
+	Print Start_burn_time.
+	Print HorzBurnTimeEta.
+	Print TotBurnTimeEta.
+	Print time:seconds.
+	Until time:seconds > HorzBurnTimeEta{
 		Lock Throttle to 1.0.
-		ClearScreen.
-		Print "Commencing CAB".
-	
+		wait 0.01.
 	}
+	Lock Throttle to 0.0.
 	lock steering to gl_up. // point upwards
 } //End of Function
 
 ////////////////////////////////////////////////////////////////
 
 
-Function ff_hover {	
-Parameter Hover_alt is 50, BaseLoc is gl_shipLatLng 
+Function ff_hoverLand {	
+Parameter Hover_alt is 50, BaseLoc is gl_shipLatLng. 
 	Set sv_PIDALT:SETPOINT to Hover_alt.
 	Set sv_PIDLAT:Setpoint to BaseLoc:Lat.
 	Set sv_PIDLONG:Setpoint to BaseLoc:Lng.
 	
-	Set distanceTol to 0.
-	
-	Until distanceTol < 3 { // until the ship is hovering above the set down loaction for 3 seconds (to allow for PID stability)
-		hf_PIDControlLoop().
-		if gs_distance(BaseLoc,gl_shipLatLng) < 0.1{
-			Set distanceTol to distanceTol + 0.1	
+	Set distanceTol to 0.	
+	local dtStore is lexicon().
+	dtStore:add("lastdt", TIME:SECONDS).
+	dtStore:add("lastLat",0).
+	dtStore:add("lastLng",0).	
+	Until distanceTol > 3 { // until the ship is hovering above the set down loaction for 3 seconds (to allow for PID stability)
+
+		Set dtStore to hf_PIDControlLoop(dtStore["lastdt"], dtStore["lastLat"], dtStore["lastLng"]).
+		if hf_gs_distance(BaseLoc, gl_shipLatLng) < 0.1{
+			Set distanceTol to distanceTol + 0.1.	
 		}
 		Else{
 			Set distanceTol to 0.
@@ -158,75 +171,75 @@ return result.
 }
 
 Function hf_PIDControlLoop{
-	SET ALTSpeed TO PIDALT:UPDATE(TIME:SECONDS, gl_baseALTRADAR). //Get the PID on the AlT diff as desired vertical velocity
-	Set LATSpeed to PIDLAT:Update(TIME:SECONDS, gl_shipLatLng:Lat).//Get the PID on the Lat diff as desired lat degrees/sec
-	Set LONGSpeed to PIDLONG:UPDATE(TIME:SECONDS, gl_shipLatLng:Lng). //Get the PID on the Long diff as desired long degress/sec
+Parameter lastdt, lastLat, lastLng.
 	
-	Set PIDThrott:SETPOINT to ALTSpeed. // Set the ALT diff PID as the desired vertical speed
-	Set PIDNorth:SETPOINT to LATSpeed.
-	Set PIDEast:SETPOINT to LONGSpeed. 
+	SET ALTSpeed TO sv_PIDALT:UPDATE(TIME:SECONDS, gl_baseALTRADAR). //Get the PID on the AlT diff as desired vertical velocity
+	Set LATSpeed to sv_PIDLAT:Update(TIME:SECONDS, gl_shipLatLng:Lat).//Get the PID on the Lat diff as desired lat degrees/sec
+	Set LONGSpeed to sv_PIDLONG:UPDATE(TIME:SECONDS, gl_shipLatLng:Lng). //Get the PID on the Long diff as desired long degress/sec
+	
+	Set sv_PIDThrott:SETPOINT to ALTSpeed. // Set the ALT diff PID as the desired vertical speed
+	Set sv_PIDNorth:SETPOINT to LATSpeed.
+	Set sv_PIDEast:SETPOINT to LONGSpeed. 
 	
 	Set NorthSpeed to (gl_shipLatLng:Lat - lastLat)/(TIME:SECONDS-lastdt).
 	Set EastSpeed to (gl_shipLatLng:Lng - lastLng)/(TIME:SECONDS-lastdt).
 	
-	SET ThrottSetting TO PIDThrott:UPDATE(TIME:SECONDS, verticalspeed). // PID the vertical velocity with the new desired speed
-	SET NorthDirection TO PIDNorth:UPDATE(TIME:SECONDS, NorthSpeed). // PID the North velocity with the new desired speed
-	SET EastDirection TO PIDEast:UPDATE(TIME:SECONDS, EastSpeed). // PID the East velocity with the new desired speed
+	SET ThrottSetting TO sv_PIDThrott:UPDATE(TIME:SECONDS, verticalspeed). // PID the vertical velocity with the new desired speed
+	SET NorthDirection TO sv_PIDNorth:UPDATE(TIME:SECONDS, NorthSpeed). // PID the North velocity with the new desired speed
+	SET EastDirection TO sv_PIDEast:UPDATE(TIME:SECONDS, EastSpeed). // PID the East velocity with the new desired speed
 
 	Set SteerDirection to UP + r(-NorthDirection,-EastDirection,180). // r(pitch, yaw, roll) set roll to zero, this will allow pitch to equal Lat(North) direction required and Yaw(East) to equal Long direction required		
-		
+	Lock Throttle to ThrottSetting.	
 	
 	ClearScreen.
 	Print "Landing".		
-	Print "Time Passed: " + (TIME:SECONDS - Timebase).
-	Print "===============================".
-	Print "Base: " + BaseLoc.
 	Print "===============================".		
 	Print "Lat: " + gl_shipLatLng:Lat.
-	Print "Lat diff: " + PIDLAT:Pterm/PIDLAT:KP.		
-	Print "PIDLAT Out: " + PIDLAT:OUTPUT.			
+	Print "Lat diff: " + sv_PIDLAT:Pterm/sv_PIDLAT:KP.		
+	Print "PIDLAT Out: " + sv_PIDLAT:OUTPUT.			
 	Print "Desired LATSpeed: " + LATSpeed.			
 	Print "NorthSpeed: " + NorthSpeed.
 	Print "NorthDirection: " + NorthDirection.		
 	Print "===============================".		
 	Print "Long: " + gl_shipLatLng:Lng.
-	Print "Long diff: " + PIDLONG:Pterm/PIDLONG:KP.
-	Print "PIDLONG Out: " + PIDLONG:OUTPUT.
+	Print "Long diff: " + sv_PIDLONG:Pterm/sv_PIDLONG:KP.
+	Print "PIDLONG Out: " + sv_PIDLONG:OUTPUT.
 	Print "Desired LONGSpeed: " + LONGSpeed.
 	Print "EastSpeed: " + EastSpeed.		
 	Print "EastDirection: " + EastDirection.		
 	Print "===============================".	
-	Print "ALT Kp: " + PIDALT:Pterm.
-	Print "ALT Ki: " + PIDALT:Iterm.
-	Print "ALT Kd: " + PIDALT:Dterm.
-	Print "ALT Out: " + PIDALT:OUTPUT.
+	Print "ALT Kp: " + sv_PIDALT:Pterm.
+	Print "ALT Ki: " + sv_PIDALT:Iterm.
+	Print "ALT Kd: " + sv_PIDALT:Dterm.
+	Print "ALT Out: " + sv_PIDALT:OUTPUT.
 	Print "===============================".
-	Print "Thrott Kp: " + PIDThrott:Pterm.
-	Print "Thrott Ki: " + PIDThrott:Iterm.
-	Print "Thrott Kd: " + PIDThrott:Dterm.
-	Print "Thrott Out: " + PIDThrott:OUTPUT.
+	Print "Thrott Kp: " + sv_PIDThrott:Pterm.
+	Print "Thrott Ki: " + sv_PIDThrott:Iterm.
+	Print "Thrott Kd: " + sv_PIDThrott:Dterm.
+	Print "Thrott Out: " + sv_PIDThrott:OUTPUT.
 	Print "===============================".
 	//Print "Delta throttle: "+ dThrot.
 	Print "Throttle Setting: "+ ThrottSetting.
+	Print "Alt" + ship:Altitude.
+	Print "Ground Alt" + gl_surfaceElevation.
 	Print "Radar" + gl_baseALTRADAR.
-	Print "Distance from Base: " + gs_distance(BaseLoc,gl_shipLatLng).
 	Print "Heading: " + ship:heading.
 	Print "Bearing: " + ship:bearing.
-	Print "True Bearing: " + gs_bearing(gl_shipLatLng,gl_NORTHPOLE).
+	Print "True Bearing: " + hf_gs_bearing(gl_shipLatLng,gl_NORTHPOLE).
 	Print "===============================".
 	Print "Base fall time: " + sqrt((2*gl_baseALTRADAR)/(gl_GRAVITY)).
 	Print "Fall time: " + gl_fallTime.	
-	Print "Fall time alt: " + gl_fallTimealt.	
 	Print "Fall vel: " + gl_fallVel.
-	Print "Fall dist: " + gl_fallDist.
-	Print "Fall burn time: " + Node_Calc["burn_time"](gl_fallVel).
-	Print "Max fall acceleration: " +gl_fallAcc.
-	// Switch to 0.
-	// LOG (TIME:SECONDS - Timebase) + "," + verticalspeed + "," + ThrotSetting TO "testflight.csv".
-	// Switch to 1.
+
+	
 	Set lastLat to gl_shipLatLng:Lat.
 	Set lastLng to gl_shipLatLng:Lng.
 	Set lastdt to TIME:SECONDS.
+	Local Result is lexicon().
+	Result:add("lastLat",lastLat).
+	Result:add("lastLng",lastLng).
+	Result:add("lastdt",lastdt).
+	Return Result.
 }
 
 //// These are fomr others code and needs to be checked for reduncancy or if they can be used
