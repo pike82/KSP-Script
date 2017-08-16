@@ -26,10 +26,9 @@ local Orbit_Calc is import("Orbit_Calc").
 
 //TODO: Create a file function that seeks out both an optimum Apoapsis and Periapsis to define an eccentic orbit.
 //TODO: look at the KOS-Stuff_master manu file for possible ideas on reducing and bettering the AN code and manervering code.
-	
+//TODO look at the hill climb stuff once a PEG ascent program is completed.	
 	Function ff_Circ {
 	//TODO: Change to work with negative inclinations.
-	//TODO: Check the dv estimates and if correct used these to create a node instead of the hill climb unless an inclination change is wanted to.
 	Parameter APSIS is "per", EccTarget is 0.005, int_Warp is false, IncTar is 1000.
 		if runMode:haskey("ff_Node_exec") {
 			Node_Calc["Node_exec"](int_Warp).		
@@ -39,17 +38,17 @@ local Orbit_Calc is import("Orbit_Calc").
 				Wait 0.1. //ensure effectively above the atmosphere before creating the node
 			}
 			Print "Ecentricity:" + SHIP:ORBIT:ECCENTRICITY.
-			If APSIS="per" or obt:transition = "ESCAPE"{
-				set Edv to Orbit_Calc["CircOrbitVel"](ship:orbit:periapsis) - Orbit_Calc["EccOrbitVel"](ship:orbit:periapsis, ship:orbit:semimajoraxis).
+			If APSIS="per" or obt:transition = "ESCAPE"{ // this either take the variable or overides the varible if the orbit is an escape trajectory to ensure it is performed at the periapsis
+				set Cirdv to Orbit_Calc["CircOrbitVel"](ship:orbit:periapsis) - Orbit_Calc["EccOrbitVel"](ship:orbit:periapsis, ship:orbit:semimajoraxis).
 				Print "Seeking Per Circ".
-				Print "Estimated Dv:"+ Edv.
+				Print "Min Dv Required:"+ Cirdv.
 				If IncTar = 1000{
-					Set n to Node(time:seconds + gl_perETA,0,0,Edv).
+					Set n to Node(time:seconds + gl_perETA,0,0,Cirdv).
 					Add n.
 				}
 				Else{
-			// use the following in the future to also conduct a change of inclination at the same time
-					Hill_Climb["Seek"](Hill_Climb["freeze"](time:seconds + gl_perETA), Hill_Climb["freeze"](0), 0, Edv, 
+			// use the following in the future to also conduct a change of inclination at the same time however if a PEG ascent is used this will become redundant
+					Hill_Climb["Seek"](Hill_Climb["freeze"](time:seconds + gl_perETA), Hill_Climb["freeze"](0), 0, Cirdv, 
 						{ 	parameter mnv. 
 							return -mnv:orbit:eccentricity - (abs(IncTar-mnv:orbit:inclination)/2).
 						}//needs to be changed to deal with negative inclinations
@@ -58,16 +57,16 @@ local Orbit_Calc is import("Orbit_Calc").
 				Node_Calc["Node_exec"](int_Warp).
 			}
 			IF APSIS="apo"{
-				set Edv to Orbit_Calc["CircOrbitVel"](ship:orbit:apoapsis) - Orbit_Calc["EccOrbitVel"](ship:orbit:apoapsis, ship:orbit:semimajoraxis).
+				set Cirdv to Orbit_Calc["CircOrbitVel"](ship:orbit:apoapsis) - Orbit_Calc["EccOrbitVel"](ship:orbit:apoapsis, ship:orbit:semimajoraxis).
 				Print "Seeking Apo Circ".
-				Print "Estimated Dv:"+ Edv.
+				Print "Min Dv Required:"+ Cirdv.
 				If IncTar = 1000{
-					Set n to Node(time:seconds + gl_apoETA,0,0,Edv).
+					Set n to Node(time:seconds + gl_apoETA,0,0,Cirdv).
 					Add n.
 				}
 				Else{
 			// use the following in the future to also conduct a change of inclination at the same time
-					Hill_Climb["Seek"](Hill_Climb["freeze"](time:seconds + gl_apoETA), Hill_Climb["freeze"](0), 0, Edv, 
+					Hill_Climb["Seek"](Hill_Climb["freeze"](time:seconds + gl_apoETA), Hill_Climb["freeze"](0), 0, Cirdv, 
 						{ 	parameter mnv. 
 							return -mnv:orbit:eccentricity - (abs(IncTar-mnv:orbit:inclination)/2).
 						} //needs to be changed to deal with negative inclinations

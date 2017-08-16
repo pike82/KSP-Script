@@ -23,28 +23,28 @@ local Node_Calc is import("Node_Calc").
 Function ff_SuBurn {	
 Parameter ThrottelStartUp is 0.1, SafeAlt is 50, EndVelocity is 1. // end velocity must be positive
 
-Until gl_fallDist < ( gl_baseALTRADAR + SafeAlt + (ThrottelStartUp * ship:verticalspeed)){ 
-	//Run screen update loop to inform of suicide burn wait.
-	Clearscreen.
-	Print "maxStopAcc:" + maxStopAcc.
-	Print "gl_fallTime:" + gl_fallTime.
-	Print "gl_fallVel:" + gl_fallVel.
-	Print "gl_fallDist:" + gl_fallDist.
-	Print "gl_fallBurnTime:" + Node_Calc["burn_time"](gl_fallVel).
-	Wait 0.001.
-}
+	Until gl_fallDist < ( gl_baseALTRADAR + SafeAlt + (ThrottelStartUp * ship:verticalspeed)){ 
+		//Run screen update loop to inform of suicide burn wait.
+		Clearscreen.
+		Print "maxStopAcc:" + maxStopAcc.
+		Print "gl_fallTime:" + gl_fallTime.
+		Print "gl_fallVel:" + gl_fallVel.
+		Print "gl_fallDist:" + gl_fallDist.
+		Print "gl_fallBurnTime:" + Node_Calc["burn_time"](gl_fallVel).
+		Wait 0.001.
+	}
 
-until (Ship:Status = "LANDED") or verticalspeed < EndVelocity  {
-	Lock Throttle to 1.0.
+	until (Ship:Status = "LANDED") or verticalspeed < EndVelocity  {
+		Lock Throttle to 1.0.
+		if (gl_baseALTRADAR < 0.25) or (Ship:Status = "LANDED"){
+			Lock Throttle to 0.
+			Break.
+		}
+	} // end Until
+
 	if (gl_baseALTRADAR < 0.25) or (Ship:Status = "LANDED"){
 		Lock Throttle to 0.
-		Break.
-	}
-} // end Until
-
-if (gl_baseALTRADAR < 0.25) or (Ship:Status = "LANDED"){
-	Lock Throttle to 0.
-} // Note: if the ship does not meet these conditions the throttle will still be locked a 1, you will need to ensure a landing has taken place or add in another section in the runtime to ensure the throttle does not stay at 1.
+	} // Note: if the ship does not meet these conditions the throttle will still be locked a 1, you will need to ensure a landing has taken place or add in another section in the runtime to ensure the throttle does not stay at 1.
 } //End of Function
 
 
@@ -56,19 +56,52 @@ Function ff_CABLand{
 	Set PePos to positionat(Ship, gl_perEta + TIME:SECONDS).
 	Set ShipPeUpVec to PePos - body:position.
 	Set PEVec to velocityat(Ship, gl_perEta + TIME:SECONDS):Surface.
+	
 	//horz
 	Set PeHorzVel to PEVec:mag. // its known at PE the verVel is Zero so all velocity must be horizontal
+	
 	//Vertical
 	Set PeVerVel to 0. // its known at PE the verVel is Zero
 	Set PeVerBurnDist to Orbit:Periapsis - (gl_PeLatLng:TERRAINHEIGHT + SafeAlt). 
 	Set PeAvgGravity to sqrt(		(	(body:mu / (Orbit:Periapsis + body:radius)^2) +((body:mu / (gl_PeLatLng:TERRAINHEIGHT + body:radius)^2 )^2)		)/2		).// Root Mean square method
 	Set PeFallTime to Orbit_Calc["quadraticPlus"](-PeAvgGravity/2, -PeVerVel, PeVerBurnDist).//r = r0 + vt - 1/2at^2 ===> Quadratic equiation 1/2*at^2 + bt + c = 0 a= acceleration, b=velocity, c= distance
 	Set PeFallVel to abs(PeVerVel) + (PeAvgGravity*PeFallTime).//v = u + at
+	
+	
+	
 	//times
 	Set HorzBurnTime to Node_Calc["burn_time"](PeHorzVel).
 	Set VerBurnTime to Node_Calc["burn_time"](PeFallVel).
 	Set totalBurnTime to HorzBurnTime + VerBurnTime.
-		
+	
+	Set SuBurnAllowableDistToStop to Altitude - gl_PeLatLng:TERRAINHEIGHT - SafeAlt.
+	Set SuBurnTimetoFallAllowableDist to Orbit_Calc["quadraticPlus"](-PeAvgGravity/2, -VERTICALSPEED, SuBurnAllowableDistToStop).//r = r0 + vt - 1/2at^2 ===> Quadratic equiation 1/2*at^2 + bt + c = 0 a= acceleration, b=velocity, c= distance
+	Set SuBurnVel to abs(VERTICALSPEED) + (PeAvgGravity*SuBurnTimetoFallAllowableDist).//v = u + at
+	Set SuBurnAcc to (ship:AVAILABLETHRUST/ship:mass). // note is is assumed this will be undertaken in a vaccum so the thrust and ISP will not change. Otherwise if undertaken in the atmosphere drag will require a variable thrust engine so small variations in ISP and thrust won't matter becasue the thrust can be adjusted to suit.
+	Set SuBurnDist to (SuBurnVel^2)/ (2*(SuBurnAcc)). // v^2 = u^2 + 2as ==> s = ((v^2) - (u^2))/2a
+
+	Set GM to body:mu.
+	Set OrbitEnergy to -GM / (newApR).
+	Set h to Sqrt(Abs((Math.Pow(OrbitEnergy * (newApR - newApR), 2) - GM * GM) / (2 * OrbitEnergy))). 
+
+        // //Computes the deltaV of the burn needed to set a given PeR and ApR at at a given UT.
+        // public static Vector3d DeltaVToEllipticize(Orbit o, double UT, double newPeR, double newApR)
+        // {
+            // double radius = o.Radius(UT);
+
+            // //sanitize inputs
+            // newPeR = MuUtils.Clamp(newPeR, 0 + 1, radius - 1);
+            // newApR = Math.Max(newApR, radius + 1);
+
+            // double GM = o.referenceBody.gravParameter;
+            // double E = -GM / (newPeR + newApR); //total energy per unit mass of new orbit
+            // double L = Math.Sqrt(Math.Abs((Math.Pow(E * (newApR - newPeR), 2) - GM * GM) / (2 * E))); //angular momentum per unit mass of new orbit
+            // double kineticE = E + GM / radius; //kinetic energy (per unit mass) of new orbit at UT
+            // double horizontalV = L / radius;   //horizontal velocity of new orbit at UT
+            // double verticalV = Math.Sqrt(Math.Abs(2 * kineticE - horizontalV * horizontalV)); //vertical velocity of new orbit at UT
+
+
+	
 	Until gl_perEta < HorzBurnTime {
 	lock steering to lookdirup(-ship:velocity:surface, gl_Top). //point retrograde
 		Clearscreen.
@@ -126,6 +159,85 @@ Parameter Hover_alt is 50, BaseLoc is gl_shipLatLng.
 
 	
 } //End of Function
+
+////////////////////////////////////////////////////////////////
+
+Function ff_goodLand{ 
+	Parameter ThrottelStartTime is 0.1, SafeAlt is 50, TargetLatLng is "Null", MaxSlopeAng is 1.
+	
+	//this landing tries to burn purely horizontal and uses a pid to determine the desired downwards velocity and then a second PID to determine the pitch required to maintain the desire downward velocity
+	
+	
+	//Body Rotation
+	
+	Set Bod_rot to Ship:Body:RotationPeriod.
+	Set Bod_Ang_Ajust to (gl_perEta /Bod_rot)*360. //angle of roation the body will incur before the ship get to the PE
+	//Set Bod_rot_Dir to Ship:Body:Angularvel TODO: work out how to tell if the orbit is in the same direction as the body rotation.
+	
+	Set PePos to positionat(Ship, gl_perEta + TIME:SECONDS). //Returens the ship-raw position at the PE
+	Set PePos to ship:Body:GEOPOSITIONOF(PePos). //Converts the predicted PE into geo-cordinates
+	Set PePos:Lat to PePos:Lat - Bod_Ang_Ajust. //TODO: Ensure this does not need a Clamp angle function for multiple roations or large values that make things negative
+
+	//Set ShipPeUpVec to PePos - body:position.
+	Set PEVec to velocityat(Ship, gl_perEta + TIME:SECONDS):Surface.
+	//horz
+	Set PeHorzVel to PEVec:mag. // its known at PE the verVel is Zero so all velocity must be horizontal
+	//Vertical
+	Set PeVerVel to 0. // its known at PE the verVel is Zero
+	Set PeVerBurnDist to Orbit:Periapsis - (PePos:TERRAINHEIGHT + SafeAlt). 
+	Set PeAvgGravity to sqrt(		(	(body:mu / (Orbit:Periapsis + body:radius)^2) +((body:mu / (PePos:TERRAINHEIGHT + body:radius)^2 )^2)		)/2		).// Root Mean square method
+	Set PeFallTime to Orbit_Calc["quadraticPlus"](-PeAvgGravity/2, -PeVerVel, PeVerBurnDist).//r = r0 + vt - 1/2at^2 ===> Quadratic equiation 1/2*at^2 + bt + c = 0 a= acceleration, b=velocity, c= distance
+	Set PeFallVel to abs(PeVerVel) + (PeAvgGravity*PeFallTime).//v = u + at
+	
+	//times
+	Set HorzBurnTime to Node_Calc["burn_time"](PeHorzVel). // Burn Time if pure horizontal burn
+	Set HozBurnTimeGravCancel to ( (HorzBurnTime /(sqrt(PeAvgGravity^2 + gl_TWR^2))/ HorzBurnTime ). //Approximate Burn Time required if performing CAB to PE
+	Set VerBurnTime to Node_Calc["burn_time"](PeFallVel). //Burn time required if performing Suicide burn at PE
+	Set HorzBurnTimeVertVelEnd to 
+	
+	if PeFallTime > VerBurnTime + HorzBurnTime +10 { //ensure the amount of time remaing after performing a pure horizontal burn enable the craft to still perform a suicide burn is sufficent plus a margin for error and craft rotation (10s).
+		Set StartTime to HozBurnTimeGravCancel. //This conditions means we can burn horizontally only and don't need to worry about altitude loss during the burn
+	}  
+	Else {
+		If PeFallTime - {
+			
+		}
+		Else {
+			Set StartTime to HorzBurnTime + HozBurnTimeGravCancel
+		}
+	}
+	
+		
+	Until gl_perEta < HorzBurnTime {
+	lock steering to lookdirup(-ship:velocity:surface, gl_Top). //point retrograde
+		Clearscreen.
+		Print PeHorzVel.
+		Print PeVerBurnDist.
+		Print PeFallTime.
+		Print HorzBurnTime.
+		Print VerBurnTime.
+		Print totalBurnTime.
+		Print gl_perEta.
+		wait 0.01.
+	}
+	Print "Starting CAB".
+	Set Start_burn_time to time:seconds.
+	Set HorzBurnTimeEta to HorzBurnTime + Start_burn_time.
+	Set TotBurnTimeEta to HorzBurnTime + Start_burn_time.
+	Print Start_burn_time.
+	Print HorzBurnTimeEta.
+	Print TotBurnTimeEta.
+	Print time:seconds.
+	Until time:seconds > HorzBurnTimeEta{
+		Lock Throttle to 1.0.
+		wait 0.01.
+	}
+	Lock Throttle to 0.0.
+	lock steering to gl_up. // point upwards
+} //End of Function
+
+////////////////////////////////////////////////////////////////
+
 
 ////////////////////////////////////////////////////////////////
 //Helper Functions
@@ -242,7 +354,10 @@ Parameter lastdt, lastLat, lastLng.
 	Return Result.
 }
 
-//// These are fomr others code and needs to be checked for reduncancy or if they can be used
+
+
+//////////////////////////////////////////////////////////
+//// These are from others code and needs to be checked for reduncancy or if they can be used
 
 
 
