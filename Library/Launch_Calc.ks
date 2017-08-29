@@ -65,7 +65,6 @@ Parameter ascendLongDiff is 0.2.
 	}
 	
 	local diffPlaneAng is 1000. //Set higher than the max inclination so it enters the loop
-	//TODO: Look into making the untill loop +0.2 soft coded as this may be different on other bodies
 	until diffPlaneAng < incDiff + ascendLongDiff{
 		if diffPlaneAng > 30{
 			set warp to 4.

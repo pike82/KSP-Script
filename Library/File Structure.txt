@@ -1,0 +1,37 @@
+Boot File 
+	- This provides Uplink and connection control. 
+	- This handles the movement between runmodes and Persistant keys within the runmodes file.
+
+knu
+	- handles all function calls between libaries and mission file
+
+	
+LIBRARIES	
+
+Hill Climb
+	- The Code used when a hill climbing is required to calculate a solution.
+	
+Docking
+	- Deals with close in docking manuevers and seperation only. 
+
+OrbManu
+	- Deals with standard orbital manuovers such at APO and PER Changes.
+		
+ORBRV
+	- Deals with setting up and executing a RV between to craft within the same SOI.
+
+Node Calc
+	- Handles and executes all manuvour nodes.
+
+Staging
+	- Handles and executes all Staging requirements.
+	
+Launch Calc
+	- Calculates the launch window and direction required for all craft.
+
+Launch Atm
+	- Handles and executes all launch requirements in an atmosphere.
+	
+Orb Calc
+	- Calculates details about the current orbit.
+	
