@@ -4,7 +4,7 @@
 ///////////////////////////////////////////////////////////////////////////////////
 ///// List of functions that can be called externally
 ///////////////////////////////////////////////////////////////////////////////////
-	local Launch_Calcs is lex(
+	local Util_Launch is lex(
 		"LaunchAzimuth", ff_LaunchAzimuth@,
 		"launchwindow", ff_launchwindow@
 	).
@@ -129,5 +129,5 @@ function hf_normalvector{
 //Export list of functions that can be called externally for the mission file	to use
 /////////////////////////////////////////////////////////////////////////////////////
 	
-    export(Launch_Calcs).
+    export(Util_Launch).
 } // End of anon

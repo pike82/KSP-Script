@@ -2,14 +2,13 @@
 { // Start of anon
 
 ///// Download Dependant libraies
-local Orbit_Calcs is import("Orbit_Calc").
-local Node_Calc is import("Node_Calc").
+local Util_Engine is import("Util_Engine").
 
 ///////////////////////////////////////////////////////////////////////////////////
 ///// List of functions that can be called externally
 ///////////////////////////////////////////////////////////////////////////////////
 
-	local landing_vac is lex(
+	local Util_landing is lex(
 		"Gravity",ff_Gravity@,
 		"Suicide_info", ff_Suicide_info@
 	).
@@ -58,7 +57,7 @@ Parameter ThrottelStartUp is 0.1, SafeAlt is 50, EndVelocity is 1. // end veloci
 		Print "gl_fallTime:" + gl_fallTime.
 		Print "gl_fallVel:" + gl_fallVel.
 		Print "gl_fallDist:" + gl_fallDist.
-		Print "gl_fallBurnTime:" + Node_Calc["burn_time"](gl_fallVel).
+		Print "gl_fallBurnTime:" + Util_Engine["burn_time"](gl_fallVel).
 		Wait 0.001.
 	}
 
@@ -98,8 +97,8 @@ Parameter ThrottelStartUp is 0.1, SafeAlt is 50, EndVelocity is 1. // end veloci
 	
 	
 	// //times
-	// Set HorzBurnTime to Node_Calc["burn_time"](PeHorzVel).
-	// Set VerBurnTime to Node_Calc["burn_time"](PeFallVel).
+	// Set HorzBurnTime to Util_Engine["burn_time"](PeHorzVel).
+	// Set VerBurnTime to Util_Engine["burn_time"](PeFallVel).
 	// Set totalBurnTime to HorzBurnTime + VerBurnTime.
 	
 	
@@ -226,16 +225,16 @@ Function ff_goodLand{
 	Set PeFallVel to abs(PeVerVel) + (PeAvgGravity*PeFallTime).//v = u + at
 	
 	//times
-	Set HorzBurnTime to Node_Calc["burn_time"](PeHorzVel). // Burn Time if pure horizontal burn
+	Set HorzBurnTime to Util_Engine["burn_time"](PeHorzVel). // Burn Time if pure horizontal burn
 	Set HozBurnTimeGravCancel to (HorzBurnTime /(sqrt(PeAvgGravity^2 + gl_TWR^2))/ HorzBurnTime ). //Approximate Burn Time required if performing CAB to PE
-	Set VerBurnTime to Node_Calc["burn_time"](PeFallVel). //Burn time required if performing Suicide burn at PE
+	Set VerBurnTime to Util_Engine["burn_time"](PeFallVel). //Burn time required if performing Suicide burn at PE
 
 	//Suicide burn Calcs
 	
 	Set SuBurnDistToStop to Altitude - gl_PeLatLng:TERRAINHEIGHT - SafeAlt. // Calculates the distance between the craft and the intended stopping height
 	Set SuBurnTimeFallToStop to Orbit_Calc["quadraticPlus"](-PeAvgGravity/2, -VERTICALSPEED, SuBurnDistToStop).// the time to fall from the current position to the the intended stopping height r = r0 + vt - 1/2at^2 ===> Quadratic equiation 1/2*at^2 + bt + c = 0 a= acceleration, b=velocity, c= distance
 	Set SuBurnVel to abs(VERTICALSPEED) + (PeAvgGravity*SuBurnTimeFallToStop).// the dv required to perform the suicide burn. v = u + at
-	Set SuBurnVelTime to Node_Calc["burn_time"](SuBurnVel)*PeAvgGravity.
+	Set SuBurnVelTime to Util_Engine["burn_time"](SuBurnVel)*PeAvgGravity.
 	Set SuBurnAcc to (ship:AVAILABLETHRUST/ship:mass). // note is is assumed this will be undertaken in a vaccum so the thrust and ISP will not change. Otherwise if undertaken in the atmosphere drag will require a variable thrust engine so small variations in ISP and thrust won't matter becasue the thrust can be adjusted to suit.
 	Set SuBurnDist to 1000000000000000. // Intial Value to get into the loop
 	Set SuBurnDistOld to 1. // Intial Value to get into the loop
@@ -247,7 +246,7 @@ Function ff_goodLand{
 	Until (abs(SuBurnDist - SuBurnDistOld) > 0.5) or (loopI > 10){ /// loop to find the velocity required to cancel out gravity losses during the suicide burn.
 		Set SuBurnDistOld to SuBurnDist.
 		Set SuBurnGravLoss to SuBurnVelTime*PeAvgGravity. //Gravity loss estimate on dv required.
-		Set SuBurnVelTime to Node_Calc["burn_time"](SuBurnVel+SuBurnGravLoss). //new burn time required including dv adjusted with gravity loss.
+		Set SuBurnVelTime to Util_Engine["burn_time"](SuBurnVel+SuBurnGravLoss). //new burn time required including dv adjusted with gravity loss.
 		Set SuBurnDist to ((SuBurnVel)^2)/ (2*(SuBurnAcc)). // height traversed while undertaking the suicide burn. v^2 = u^2 + 2as ==> s = ((v^2) - (u^2))/2a
 		Set LoopI to LoopI + 1.
 	}
@@ -469,5 +468,5 @@ function scalarProj { //Scalar projection of two vectors. Find component of a al
 //Export list of functions that can be called externally for the mission file to use
 /////////////////////////////////////////////////////////////////////////////////////
 	
-  export(landing_vac).
+  export(Util_landing).
 } // End of anon

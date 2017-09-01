@@ -7,7 +7,7 @@
 ///// List of functions that can be called externally
 ///////////////////////////////////////////////////////////////////////////////////
 
-    local Node_Calc is lex(
+    local OrbMnvNode is lex(
 		"Node_exec", ff_Node_exec@,
 		"burn_time", ff_burn_time@,
 		"Mdot", ff_mdot@,
@@ -66,45 +66,6 @@ parameter autowarp is 0, Alrm is True, n is nextnode, v is n:burnvector, startti
 
 }/// End Function
 
-///////////////////////////////////////////////////////////////////////////////////		  
-	  
-function ff_burn_time {
-parameter dV.
-	local g is 9.81.  // Gravitational acceleration constant used in game for Isp Calculation (m/s²)
-	local m is ship:mass * 1000. // Starting mass (kg)
-	local e is constant():e. // Base of natural log
-	local engine_count is 0.
-	local thrust is 0.
-	local isp is 0. // Engine ISP (s)
-	list engines in all_engines.
-	for en in all_engines if en:ignition and not en:flameout {
-	  set thrust to thrust + en:availablethrust.
-	  set isp to isp + en:isp.
-	  set engine_count to engine_count + 1.
-	}
-	set isp to isp / engine_count.
-	set thrust to thrust * 1000. // Engine Thrust (kg * m/s²)
-	return g * m * isp * (1 - e^(-dV/(g*isp))) / thrust.
-}/// End Function
-
-///////////////////////////////////////////////////////////////////////////////////	
-	
-function ff_mdot {
-local g is 9.81.  // Gravitational acceleration constant used in game for Isp Calculation (m/s²)
-local engine_count is 0.
-local thrust is 0.
-local isp is 0. // Engine ISP (s)
-list engines in all_engines.
-for en in all_engines if en:ignition and not en:flameout {
-  set thrust to thrust + en:availablethrust.
-  set isp to isp + en:isp.
-  set engine_count to engine_count + 1.
-}
-set isp to isp / engine_count.
-set thrust to thrust * 1000. // Engine Thrust (kg * m/s²)
-return (thrust/(g * isp)). //kg of change
-}/// End Function
-	
 ///////////////////////////////////////////////////////////////////////////////////	
 
 function ff_user_Node_exec {
@@ -156,6 +117,6 @@ function ff_user_Node_exec {
 //Export list of functions that can be called externally for the mission file	to use
 /////////////////////////////////////////////////////////////////////////////////////
 	
-  export(Node_Calc).
+  export(OrbMnvNode).
 } // End of anon
 

@@ -3,35 +3,59 @@ Boot File
 	- This handles the movement between runmodes and Persistant keys within the runmodes file.
 
 knu
-	- handles all function calls between libaries and mission file
+	- handles all function calls between libaries and the mission file
 
 	
 LIBRARIES	
 
 Hill Climb
-	- The Code used when a hill climbing is required to calculate a solution.
+	- The Code used when a hill climbing iteration process is required to calculate a solution.
 	
 Docking
-	- Deals with close in docking manuevers and seperation only. 
+	- Deals with close in docking manuevers and docking seperation only. 
 
-OrbManu
-	- Deals with standard orbital manuovers such at APO and PER Changes.
-		
-ORBRV
+OrbRv
 	- Deals with setting up and executing a RV between to craft within the same SOI.
 
-Node Calc
+OrbMnvs
+	- Deals with standard orbital manuovers such as Transfers, APO and PER changes.
+		
+Flight
+	- Deals With areodynamics of craft in Atmospheric flight.
+
+OrbMnvNode
 	- Handles and executes all manuvour nodes.
 
-Staging
-	- Handles and executes all Staging requirements.
-	
+Launch_Atm
+	- Handles Launches in an Atmosphere.
+
+Launch_Vac
+	-Handles launches ina vacuumn.
+
+Landing_Atm
+	_Handles landing on an airless body.
+
+Landing_Atm
+	- Handles landing on a body with an atmosphere.
+
 Launch Calc
 	- Calculates the launch window and direction required for all craft.
 
 Launch Atm
 	- Handles and executes all launch requirements in an atmosphere.
 	
-Orb Calc
-	- Calculates details about the current orbit.
+Util_Orbit
+	- Calculates details about the current orbit or proposed orbit.
+
+Util_Engine
+	- Calculated Details about the Current stages Engines
+
+Util_Vessel
+	- Calculate Details about the current vessel and the onboard systems.
+
+Util_Landing
+	- Calculates details about Landing
+
+Util_Launch
+	- Calculate Launch Details.
 	

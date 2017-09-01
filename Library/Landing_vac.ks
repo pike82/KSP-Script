@@ -2,10 +2,8 @@
 { // Start of anon
 
 ///// Download Dependant libraies
-local Staging is import("Staging").
-local Orbit_Calcs is import("Orbit_Calc").
-local Node_Calc is import("Node_Calc").
-local Landing_Calc is import("Landing_Calc").
+local Util_Engine is import("Util_Engine").
+local Util_Landing is import("Util_Landing").
 
 ///////////////////////////////////////////////////////////////////////////////////
 ///// List of functions that can be called externally
@@ -31,7 +29,7 @@ Parameter ThrottelStartUp is 0.1, SafeAlt is 50, EndVelocity is 1. // end veloci
 		Print "gl_fallTime:" + gl_fallTime.
 		Print "gl_fallVel:" + gl_fallVel.
 		Print "gl_fallDist:" + gl_fallDist.
-		Print "gl_fallBurnTime:" + Node_Calc["burn_time"](gl_fallVel).
+		Print "gl_fallBurnTime:" + Util_Engine["burn_time"](gl_fallVel).
 		Wait 0.001.
 	}
 
@@ -122,8 +120,8 @@ Function ff_CABLand{
 	//PE Suicide Burn Calcls
 	
 	Set PeVerBurnDist to Orbit:Periapsis - (PePos:TERRAINHEIGHT + SafeAlt). 
-	Set Gravarr to Landing_Calc["Gravity"](PeVerBurnDist).
-	Set SuInfoarr to Landing_Calc["Suicide_info"](Gravarr["AVG"],PeVerBurnDist).
+	Set Gravarr to Util_Landing["Gravity"](PeVerBurnDist).
+	Set SuInfoarr to Util_Landing["Suicide_info"](Gravarr["AVG"],PeVerBurnDist).
 	Set PeFallTime to SuInfoarr["Time"].
 	Set PeFallVel to SuInfoarr["Vel"].
 	Set PeFallDist to SuInfoarr["Dist"].
@@ -132,9 +130,9 @@ Function ff_CABLand{
 	Print "PeFallDist " + PeFallDist.
 	
 	//times
-	Set HorzBurnTime to Node_Calc["burn_time"](PeHorzVel). // Burn Time if pure horizontal burn
+	Set HorzBurnTime to Util_Engine["burn_time"](PeHorzVel). // Burn Time if pure horizontal burn
 	Set HozBurnTimeGravCancel to (HorzBurnTime /(sqrt(Gravarr["AVG"]^2 + gl_TWR^2))/ HorzBurnTime ). //Approximate Burn Time required if performing CAB to PE
-	Set VerBurnTime to Node_Calc["burn_time"](PeFallVel). //Burn time required if performing Suicide burn falling from PE
+	Set VerBurnTime to Util_Engine["burn_time"](PeFallVel). //Burn time required if performing Suicide burn falling from PE
 	Print "HorzBurnTime " + HorzBurnTime.
 	Print "HozBurnTimeGravCancel " + HozBurnTimeGravCancel.
 	Print "VerBurnTime " + VerBurnTime.
@@ -184,8 +182,8 @@ Function ff_CABLand{
 		//Current Suicide burn Calcs
 	
 		Set DistToStop to Altitude - gl_PeLatLng:TERRAINHEIGHT - SafeAlt. // Calculates the distance between the craft and the intended stopping height
-		Set CurrGravarr to Landing_Calc["Gravity"](DistToStop).
-		Set CurrSuInfoarr to Landing_Calc["Suicide_info"](CurrGravarr["AVG"],DistToStop).
+		Set CurrGravarr to Util_Landing["Gravity"](DistToStop).
+		Set CurrSuInfoarr to Util_Landing["Suicide_info"](CurrGravarr["AVG"],DistToStop).
 		Set CurrFallTime to CurrSuInfoarr["Time"].
 		Set CurrFallVel to CurrSuInfoarr["Vel"].
 		Set CurrSuDist to CurrSuInfoarr["dist"].	

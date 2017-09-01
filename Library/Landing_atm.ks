@@ -2,9 +2,9 @@
 { // Start of anon
 
 ///// Download Dependant libraies
-local Staging is import("Staging").
-local Node_Calc is import("Node_Calc").
-local Orbit_Calc is import("Orbit_Calc").
+local Util_Engine is import("Util_Engine").
+local Util_Vessel is import("Util_Vessel").
+local Util_Orbit is import("Util_Orbit").
 
 ///////////////////////////////////////////////////////////////////////////////////
 ///// List of functions that can be called externally
@@ -36,15 +36,15 @@ local Orbit_Calc is import("Orbit_Calc").
 
 	Lock gr to (ship:orbit:body:mu/ship:obt:body:radius^2)-(ship:orbit:body:mu/((ship:body:atm:height+ship:body:radius)^2)). // avg accelaration experienced
 	Set R_min to ship:orbit:periapsis + ship:obt:body:radius.
-	Set Sdv to Staging["stage_delta_v"]().
+	Set Sdv to Util_Engine["stage_delta_v"]().
 	Set PreMechEngy to - (ship:orbit:body:mu/(2*ship:orbit:semimajoraxis)).//this is in kJ/kg
 	Set MechEngyChange to 0.5*Ship:mass*(Sdv*Sdv).
 	Set newsma to -(ship:orbit:body:mu/(2*(PreMechEngy-MechEngyChange))).
 	Set newsmaEcc to 1 - (R_min /newsma).
-	Set CurTA to Orbit_Calc["TAr"](Body:Altitude+ship:obt:body:radius,ship:orbit:semimajoraxis,ship:orbit:eccentricity).
-	Set AtmTA to Orbit_Calc["TAr"](ship:body:atm:height+ship:obt:body:radius,ship:orbit:semimajoraxis,ship:orbit:eccentricity).
-	Set TTAtmoUT to Orbit_Calc["TAtimeFromPE"](ship:orbit:eccentricity,CurTA) - Orbit_Calc["TAtimeFromPE"](ship:orbit:eccentricity,AtmTA) + time:seconds.
-	Set newAtmTAUT to Orbit_Calc["TAr"](ship:body:atm:height+ship:obt:body:radius, newsma, newsmaEcc) + time:seconds.
+	Set CurTA to Util_Orbit["TAr"](Body:Altitude+ship:obt:body:radius,ship:orbit:semimajoraxis,ship:orbit:eccentricity).
+	Set AtmTA to Util_Orbit["TAr"](ship:body:atm:height+ship:obt:body:radius,ship:orbit:semimajoraxis,ship:orbit:eccentricity).
+	Set TTAtmoUT to Util_Orbit["TAtimeFromPE"](ship:orbit:eccentricity,CurTA) - Util_Orbit["TAtimeFromPE"](ship:orbit:eccentricity,AtmTA) + time:seconds.
+	Set newAtmTAUT to Util_Orbit["TAr"](ship:body:atm:height+ship:obt:body:radius, newsma, newsmaEcc) + time:seconds.
 	Lock TTAtmo to abs(
 						(-verticalspeed + 
 							sqrt(
@@ -68,7 +68,7 @@ local Orbit_Calc is import("Orbit_Calc").
 	Print TTAtmoUT.
 	Print newAtmTAUT.
 	Wait 2.
-	until TTAtmo - Node_Calc["burn_time"](Sdv) < 0{
+	until TTAtmo - Util_Engine["burn_time"](Sdv) < 0{
 		Clearscreen.
 			Print "Height from ATM:" + (abs(gl_baseALTRADAR - Body:Atm:HEIGHT)).
 			Print "Vertical Speed:" + (verticalspeed).
@@ -76,8 +76,8 @@ local Orbit_Calc is import("Orbit_Calc").
 			Print "Time To ATM:" + (TTAtmo).
 			Print "Time To ATMUT:" + (TTAtmoUT).
 			Print "Mew Time To ATMUT:" + (newAtmTAUT).
-			Print "Burn Time:" +(Node_Calc["burn_time"](Sdv)).
-			Print "Delta V:" +(Staging["stage_delta_v"]()).
+			Print "Burn Time:" +(Util_Engine["burn_time"](Sdv)).
+			Print "Delta V:" +(Util_Engine["stage_delta_v"]()).
 			Print "Current TA V:" + CurTA.
 			Print "Atmosphere TA:" + AtmTA.
 		wait 1.0.
@@ -122,16 +122,16 @@ local Orbit_Calc is import("Orbit_Calc").
 	Parameter dep_Alt is 2000.
 	Print (gl_baseALTRADAR).
 	Wait 5.0.
-	//Staging["R_chutes"]("arm parachute").
-	//Staging["R_chutes"]("disarm parachute").
-	//Staging["R_chutes"]("deploy parachute").
-	//Staging["R_chutes"]("cut chute").
+	//Util_Vessel["R_chutes"]("arm parachute").
+	//Util_Vessel["R_chutes"]("disarm parachute").
+	//Util_Vessel["R_chutes"]("deploy parachute").
+	//Util_Vessel["R_chutes"]("cut chute").
 		until gl_baseALTRADAR < dep_Alt {
 			lock steering to ship:retrograde.
 		}
 	Lock Throttle to 0.0.
 	CHUTESSAFE ON.
-	Staging["R_chutes"]("deploy chute"). //used when real chutes is installed
+	Util_Vessel["R_chutes"]("deploy chute"). //used when real chutes is installed
 	RCS off.
 	}// End Function
 

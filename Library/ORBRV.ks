@@ -3,9 +3,9 @@
 
 ///// Download Dependant libraies
 local Hill_Climb is import("Hill_Climb").
-local Node_Calc is import("Node_Calc").
-local ORBManu is import("ORBManu").
-local Orbit_Calc is import("Orbit_Calc").
+local OrbMnvNode is import("OrbMnvNode").
+local OrbMnvs is import("OrbMnvs").
+local Util_Orbit is import("Util_Orbit").
 
 ///////////////////////////////////////////////////////////////////////////////////
 ///// List of functions that can be called externally
@@ -29,11 +29,11 @@ local Orbit_Calc is import("Orbit_Calc").
 Function ff_BodyTransfer {	
 Parameter target_Body, Target_Perapsis, maxDV is 1000, IncTar is 90, int_Warp is False.
 	if runMode:haskey("ff_Node_exec") {
-		Node_Calc["Node_exec"](int_Warp).		
+		OrbMnvNode["Node_exec"](int_Warp).		
 	} //end runModehaskey if
 	Else{	
 		hf_seek_SOI(target_Body, Target_Perapsis, IncTar, maxDV).
-		Node_Calc["Node_exec"](int_Warp).
+		OrbMnvNode["Node_exec"](int_Warp).
 	} //end else
 }  /// End Function
 	
@@ -42,7 +42,7 @@ Parameter target_Body, Target_Perapsis, maxDV is 1000, IncTar is 90, int_Warp is
 Function ff_CraftTransfer {	
 	Parameter target_ves, Target_dist, Max_orbits, int_Warp is False.
 	if runMode:haskey("ff_Node_exec") {
-		Node_Calc["Node_exec"](int_Warp).		
+		OrbMnvNode["Node_exec"](int_Warp).		
 	} //end runModehaskey if
 	if runMode:haskey("ff_Node_exec") = false{
 		gf_set_runmode("ff_CraftTransfer",1).
@@ -52,14 +52,14 @@ Function ff_CraftTransfer {
 		Set temp to hf_TransferBurn(target_ves, Target_dist, Max_orbits, int_Warp).
 		gf_set_runmode("ff_CraftTransferBurn",temp).
 		gf_set_runmode("ff_CraftTransfer",2).
-		Node_Calc["Node_exec"](int_Warp).
+		OrbMnvNode["Node_exec"](int_Warp).
 	}//end if
 	If runMode["ff_CraftTransfer"] = 2{
 		if time:seconds < runMode["ff_CraftTransferBurn"]{
 			//Checks to see if this node has been completed in the first if statement. If so skip this step and just remove the runmodes.
 			hf_TransferRV(target_ves, Target_dist, runMode["ff_CraftTransferBurn"], int_Warp).
 			gf_remove_runmode("ff_CraftTransferBurn").
-			Node_Calc["Node_exec"](int_Warp).
+			OrbMnvNode["Node_exec"](int_Warp).
 		}
 		gf_remove_runmode("ff_CraftTransfer").
 	} //end if
@@ -104,7 +104,7 @@ function hf_seek_SOI {
 function hf_TransferInc {
 parameter target_vessel, target_distance, int_Warp is False.
 	local arr is lexicon().
-	Set arr to Orbit_Calc["Find_AN_INFO"](target_vessel).
+	Set arr to Util_Orbit["Find_AN_INFO"](target_vessel).
 	Set AN_inc to arr ["AN_inc"].
 	Set Max_inc to min(
 						arctan(target_distance/(target_vessel:orbit:APOAPSIS + Body:RADIUS)),
@@ -121,7 +121,7 @@ parameter target_vessel, target_distance, int_Warp is False.
 		Print "Inclination adjustment".
 		Print "Max Inc"+Max_inc/2.
 		Print "AN Inc" + AN_inc.
-		ORBManu["AdjPlaneInc"](0, target_vessel,(Max_inc/4),int_Warp). //Conduct inc change is required.
+		OrbMnvs["AdjPlaneInc"](0, target_vessel,(Max_inc/4),int_Warp). //Conduct inc change is required.
 	} // end else
 	
 } //end function TransferInc
@@ -253,7 +253,7 @@ Local atm_Height is 0.
 	Print "Intercept not possible, Orbit too big, decreasing Apoapsis at Periapsis".
 		if orbCatchup > Max_orbits{
 			Print "Decreasing Periapsis from Apoapsis as orbits too similar to make intercept in max orbits".
-			ORBManu["adjper"](Ap_Tar-target_distance, 50, true). //reduces periapsis to be lower that the target crafts Apoapsis - the target distance to ensure inside the Apoapsis
+			OrbMnvs["adjper"](Ap_Tar-target_distance, 50, true). //reduces periapsis to be lower that the target crafts Apoapsis - the target distance to ensure inside the Apoapsis
 			Set Starting_time to time:seconds + ETA:PERIAPSIS. // need to recalculate the starting time based on the new orbit (we know we are at the apoapsis so enough time before the periapsis).
 		}
 		Wait 10.0. //debugging
@@ -265,7 +265,7 @@ Local atm_Height is 0.
 		Print "Intercept not possible, Orbit too small, increasing Apoapsis at Periapsis".
 		if orbCatchup > Max_orbits{
 			Print "Increasing Apoapsis from Periapsis as orbits too similar to make intercept in max orbits".
-			ORBManu["adjApo"](Pe_Tar+target_distance, 50, true). //increases apoapsis to be higher than the target crafts periapsis - the target distance to ensure inside the Apoapsis
+			OrbMnvs["adjApo"](Pe_Tar+target_distance, 50, true). //increases apoapsis to be higher than the target crafts periapsis - the target distance to ensure inside the Apoapsis
 			Set Starting_time to time:seconds + ETA:PERIAPSIS. // need to recalculate the starting time based on the new orbit (we know we are at the apoapsis so enough time before the periapsis).
 		}
 		Wait 10.0. //debugging
@@ -281,7 +281,7 @@ Local atm_Height is 0.
 			Print "SMAReq: " + SMAReq.
 			Set ApReq to ((2*SMAReq) - (gl_Ship_Pe + body:radius))- body:radius. //Ap = 2SMA-Pe Note: Units in distance from centre of body so need radius conversion for calc and then back.
 			Print "ApReq: " + ApReq.
-			ORBManu["adjapo"](ApReq, 50, true).
+			OrbMnvs["adjapo"](ApReq, 50, true).
 			Set Starting_time to time:seconds + ETA:PERIAPSIS. // need to recalculate the starting time based on the new orbit (we know we have just passed the periapsis).
 		}
 		Wait 10.0. //debugging

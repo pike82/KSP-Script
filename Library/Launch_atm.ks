@@ -2,7 +2,8 @@
 { // Start of anon
 
 ///// Download Dependant libraies
-local Staging is import("Staging").
+local Util_Engine is import("Util_Engine").
+local Util_Vessel is import("Util_Vessel").
 
 ///////////////////////////////////////////////////////////////////////////////////
 ///// List of functions that can be called externally
@@ -122,9 +123,9 @@ Function ff_GravityTurnAoA{
 	//Log "# Time, # grav pitch, # AoA, # dPitch, # PTerm , # ITerm , # DTerm" to AOA.csv.
 	
 	UNTIL (SHIP:Q < MaxQ*0.1) {  //this will need to change so it is not hard set.
-		Staging["Flameout"](Flametime).
-		Staging["FAIRING"]().
-		Staging["COMMS"]().
+		Util_Engine["Flameout"](Flametime).
+		Util_Vessel["FAIRING"]().
+		Util_Vessel["COMMS"]().
 
 		SET dPitch TO PIDAngle:UPDATE(TIME:SECONDS, gl_AoA).
 		// you can also get the output value later from the PIDLoop object
@@ -175,9 +176,9 @@ Function ff_GravityTurnPres{
 	LOCK firstPhasePitch to (gravPitch * atmoDensity).
 	LOCK STEERING to HEADING(azimuth, firstPhasePitch).
 	UNTIL SHIP:Apoapsis > sv_targetAltitude {
-		Staging["Flameout"]().
-		Staging["FAIRING"]().
-		Staging["COMMS"]().
+		Util_Engine["Flameout"]().
+		Util_Vessel["FAIRING"]().
+		Util_Vessel["COMMS"]().
 	}
 	UNLOCK firstPhasePitch.
 	UNLOCK atmoDensity.
@@ -202,21 +203,18 @@ PARAMETER 	ApTarget, Kp is 0.3, Ki is 0.0002, Kd is 12, PID_Min is -0.1, PID_Max
 	
 	Set highPitch to 30.	///Intital setup TODO: change this to reflect the current pitch
 	LOCK STEERING TO HEADING(sv_intAzimith, highPitch). //move to pitchover angle
-	//SET PID TO PIDLOOP(KP, KI, KD, MINOUTPUT, MAXOUTPUT). 13.135s and 1, trailing with 1 an 57.54,
 	Set PIDALT to PIDLOOP(vKp, vKi, vKd, vPID_Min, vPID_Max). // used to create a vertical speed
-	Set PIDALT:SETPOINT to ApTarget.
+	Set PIDALT:SETPOINT to 0. // What the altitude difference to be zero
 	//TODO: Look into making the vertical speed also dependant of the TWR as low thrust upper stages may want to keep a higher initial vertical speed.
+	
 	Set PIDAngle to PIDLOOP(Kp, Ki, Kd, PID_Min, PID_Max). // used to find a desired pitch angle from the vertical speed
 	
-
-	//Set StartLogtime to TIME:SECONDS.
-	//Log "# Time, # high pitch, # gl_apoEta, # dPitch, # PTerm , # ITerm , # DTerm" to Apo.csv.
-
 	UNTIL ((SHIP:APOAPSIS > sv_targetAltitude) And (SHIP:PERIAPSIS > sv_targetAltitude))  OR (SHIP:APOAPSIS > sv_targetAltitude*1.1){
-		Staging["Flameout"](1, 0.01).
-		Staging["FAIRING"]().
-		Staging["COMMS"]().
-		SET ALTSpeed TO PIDALT:UPDATE(TIME:SECONDS, ship:altitude).
+		Util_Engine["Flameout"](1, 0.01).
+		Util_Vessel["FAIRING"]().
+		Util_Vessel["COMMS"]().
+		
+		SET ALTSpeed TO PIDALT:UPDATE(TIME:SECONDS, ApTarget-ship:altitude). //update the PID with the altitude difference
 		Set PIDAngle:SETPOINT to ALTSpeed. // Sets the desired vertical speed for input into the pitch
 		
 		SET dPitch TO PIDAngle:UPDATE(TIME:SECONDS, Ship:Verticalspeed). //used to find the change in pitch required to obtain the desired vertical speed.
@@ -240,6 +238,7 @@ PARAMETER 	ApTarget, Kp is 0.3, Ki is 0.0002, Kd is 12, PID_Min is -0.1, PID_Max
 		//Switch to 1.
 		Wait 0.1.
 	}	/// End of Until
+	//TODO: Create code to enable this to allow for a different AP to PE as required, rather than just circularisation at AP.
 	Unlock STEERING.
 	LOCK Throttle to 0.
 
@@ -250,7 +249,7 @@ PARAMETER 	ApTarget, Kp is 0.3, Ki is 0.0002, Kd is 12, PID_Min is -0.1, PID_Max
 	
 Function ff_InsertionPEG{ // PEG Code
 
-//instead of PEG look into keeping the Periapasis LatLong the same position via PID
+
 
 }// End of Function
 	

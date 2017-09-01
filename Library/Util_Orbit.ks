@@ -11,7 +11,7 @@ local Hill_Climb is import("Hill_Climb").
 ///// List of functions that can be called externally
 ///////////////////////////////////////////////////////////////////////////////////
 
-    local Orbit_Calc is lex(
+    local Util_Orbit is lex(
 		"EccOrbitVel", ff_EccOrbitVel@,
 		"CircOrbitVel", ff_CircOrbitVel@,
 		"Find_AN_INFO", ff_Find_AN_INFO@,
@@ -303,6 +303,6 @@ function ff_OrbitSplitVel{
 //Export list of functions that can be called externally for the mission file	to use
 /////////////////////////////////////////////////////////////////////////////////////
 	
-  export(Orbit_Calc).
+  export(Util_Orbit).
 } // End of anon
 
