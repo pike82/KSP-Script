@@ -132,14 +132,14 @@ Function hf_Orbit_Phasing {
 parameter target_vessel, Max_orbits.
 
 	Set Tar_Per to target_vessel:orbit:Period.
-	Set Max_time to (Max_orbits * gl_Ship_Per). //Gets the time from now until max orbit time
+	Set Max_time to (Max_orbits * Ship:orbit:Periapsisr). //Gets the time from now until max orbit time
 	Set Max_Orb_UT to  Max_time + time:seconds. //Get the UT of the max orbits.
-	Set PerLead to (gl_Ship_Per - Tar_Per). // Value in seconds of the difference in period times. Negative indicates faster and lower orbit.
+	Set PerLead to (Ship:orbit:Periapsisr - Tar_Per). // Value in seconds of the difference in period times. Negative indicates faster and lower orbit.
 	Print "PerLead: " + PerLead.
 	
 	//Need to think of logic relating to per lead being positive vs negative. Positve the orbit diff needs to be 360 - orbdiff becasue it needs to take the long way around.
 	
-	Set Orbits_Phasing to gl_Ship_Per/PerLead. // The number of orbits required between phasings negative indicates faster and lower orbit
+	Set Orbits_Phasing to Ship:orbit:Periapsisr/PerLead. // The number of orbits required between phasings negative indicates faster and lower orbit
 	Print "Orbits_Phasing" + Orbits_Phasing.
 	Set minOrbits_Phasing to  Orbits_Phasing/Max_orbits.
 	Set tgt_perEta to max(0,ETA:PERIAPSIS).
@@ -183,12 +183,12 @@ parameter target_vessel, Max_orbits.
 	}		
 	Print "longDiff: " + longDiff.
 	
-	Set LongDiffTime to (longDiff/360)*gl_Ship_Per. //Time difference between longitudes
+	Set LongDiffTime to (longDiff/360)*Ship:orbit:Periapsisr. //Time difference between longitudes
 	Print "LongDiffTime: " + LongDiffTime.
 	Set tgtShiptPeTime to tgt_perEta - LongDiffTime. //Time for the target to be over the ship PE (approx)
 	Print "tgtShiptPeTime: " + tgtShiptPeTime.
-	Print "gl_perEta: " + gl_perEta. // Ship time to Pe
-	Set ShipTgtDiffTime to abs(gl_perEta - tgtShiptPeTime). //Time phase difference between the ship and the Target.
+	Print "ETA:PERIAPSIS: " + ETA:PERIAPSIS. // Ship time to Pe
+	Set ShipTgtDiffTime to abs(ETA:PERIAPSIS - tgtShiptPeTime). //Time phase difference between the ship and the Target.
 	Print "ShipTgtDiffTime: " + ShipTgtDiffTime.
 	Set orbCatchup to abs(ShipTgtDiffTime / PerLead).
 	Print "orbCatchup : " + orbCatchup.
@@ -240,7 +240,7 @@ Local atm_Height is 0.
 			Set Starting_time to time:seconds +ETA:PERIAPSIS.
 	}// end if
 	Else{
-		Set Starting_time to time:seconds + ETA:PERIAPSIS + gl_Ship_Per.
+		Set Starting_time to time:seconds + ETA:PERIAPSIS + Ship:orbit:Periapsisr.
 	} // end else
 	Print "Starting Time:" + Starting_time. 
 	Print "Max Time:" + Max_Orb_UT.
@@ -248,7 +248,7 @@ Local atm_Height is 0.
 /////Look at the current orbits and see if RV can occur, if not adjust and find a solution.
 	Local result is lexicon().
 	
-	IF gl_Ship_Pe > Ap_Tar {
+	IF Ship:orbit:Periapsis > Ap_Tar {
 	//intercept not possible . Must burn at APo to lower Pe so orbits cross.
 	Print "Intercept not possible, Orbit too big, decreasing Apoapsis at Periapsis".
 		if orbCatchup > Max_orbits{
@@ -260,7 +260,7 @@ Local atm_Height is 0.
 		Set result to hf_find_intersect (target_vessel, Starting_time, Target_distance, Max_Orb_UT, atm_Height, "Big").	//end find intersect
 	}//End If
 	
-	ELSE IF gl_Ship_Ap < Pe_Tar  {
+	ELSE IF Ship:orbit:Apoapsis < Pe_Tar  {
 	//intercept not possible . Must burn at APe to Increase SMA and period (include an increase SMA function in the fittness calculation)
 		Print "Intercept not possible, Orbit too small, increasing Apoapsis at Periapsis".
 		if orbCatchup > Max_orbits{
@@ -272,14 +272,14 @@ Local atm_Height is 0.
 		Set result to hf_find_intersect (target_vessel, Starting_time, Target_distance, Max_Orb_UT, atm_Height, "Small").	//end find intersect
 	}//End ELSE IF
 	
-	Else IF ((gl_Ship_Ap > Ap_Tar) and (gl_Ship_Pe < Pe_Tar)) or ((gl_Ship_Ap < Ap_Tar) and (gl_Ship_Pe > Pe_Tar)){
+	Else IF ((Ship:orbit:Apoapsis > Ap_Tar) and (Ship:orbit:Periapsis < Pe_Tar)) or ((Ship:orbit:Apoapsis < Ap_Tar) and (Ship:orbit:Periapsis > Pe_Tar)){
 		Print "Orbits Cross".
 		if orbCatchup > Max_orbits{
-		 	Set PerReq to gl_Ship_Per + (ShipTgtDiffTime/(Max_orbits-2)). //minus two as there can be upto one orbit of manevers before and then an additional one for security as it better to allow for a higher orbit in finding a solution.
+		 	Set PerReq to Ship:orbit:Periapsisr + (ShipTgtDiffTime/(Max_orbits-2)). //minus two as there can be upto one orbit of manevers before and then an additional one for security as it better to allow for a higher orbit in finding a solution.
 			Print "PerReq: " + PerReq.
 			Set SMAReq to  ((body:mu * (PerReq^2))/(4*(Constant:pi^2)))^(1/3).     //a = cuberoot((mu *t^2)/4*pi^2)
 			Print "SMAReq: " + SMAReq.
-			Set ApReq to ((2*SMAReq) - (gl_Ship_Pe + body:radius))- body:radius. //Ap = 2SMA-Pe Note: Units in distance from centre of body so need radius conversion for calc and then back.
+			Set ApReq to ((2*SMAReq) - (Ship:orbit:Periapsis + body:radius))- body:radius. //Ap = 2SMA-Pe Note: Units in distance from centre of body so need radius conversion for calc and then back.
 			Print "ApReq: " + ApReq.
 			OrbMnvs["adjapo"](ApReq, 50, true).
 			Set Starting_time to time:seconds + ETA:PERIAPSIS. // need to recalculate the starting time based on the new orbit (we know we have just passed the periapsis).

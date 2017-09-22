@@ -43,12 +43,12 @@ local Util_Orbit is import("Util_Orbit").
 				Print "Seeking Per Circ".
 				Print "Min Dv Required:"+ Cirdv.
 				If IncTar = 1000{
-					Set n to Node(time:seconds + gl_perETA,0,0,Cirdv).
+					Set n to Node(time:seconds + ETA:PERIAPSIS,0,0,Cirdv).
 					Add n.
 				}
 				Else{
 			// use the following in the future to also conduct a change of inclination at the same time however if a PEG ascent is used this will become redundant
-					Hill_Climb["Seek"](Hill_Climb["freeze"](time:seconds + gl_perETA), Hill_Climb["freeze"](0), 0, Cirdv, 
+					Hill_Climb["Seek"](Hill_Climb["freeze"](time:seconds + ETA:PERIAPSIS), Hill_Climb["freeze"](0), 0, Cirdv, 
 						{ 	parameter mnv. 
 							return -mnv:orbit:eccentricity - (abs(IncTar-mnv:orbit:inclination)/2).
 						}//needs to be changed to deal with negative inclinations
@@ -61,12 +61,12 @@ local Util_Orbit is import("Util_Orbit").
 				Print "Seeking Apo Circ".
 				Print "Min Dv Required:"+ Cirdv.
 				If IncTar = 1000{
-					Set n to Node(time:seconds + gl_apoETA,0,0,Cirdv).
+					Set n to Node(time:seconds + ETA:APOAPSIS,0,0,Cirdv).
 					Add n.
 				}
 				Else{
 			// use the following in the future to also conduct a change of inclination at the same time
-					Hill_Climb["Seek"](Hill_Climb["freeze"](time:seconds + gl_apoETA), Hill_Climb["freeze"](0), 0, Cirdv, 
+					Hill_Climb["Seek"](Hill_Climb["freeze"](time:seconds + ETA:APOAPSIS), Hill_Climb["freeze"](0), 0, Cirdv, 
 						{ 	parameter mnv. 
 							return -mnv:orbit:eccentricity - (abs(IncTar-mnv:orbit:inclination)/2).
 						} //needs to be changed to deal with negative inclinations
@@ -91,12 +91,12 @@ local Util_Orbit is import("Util_Orbit").
 			set Edv to Util_Orbit["EccOrbitVel"](ship:orbit:apoapsis, newsma)- Util_Orbit["EccOrbitVel"](ship:orbit:apoapsis).
 			print "Estimated dv:"+ Edv.
 			If IncTar = 1000{
-				Set n to Node(time:seconds + gl_apoETA,0,0,Edv).
+				Set n to Node(time:seconds + ETA:APOAPSIS,0,0,Edv).
 				Add n.
 			}
 			Else{
 			// use the following in the future to also conduct a change of inclination at the same time
-				Hill_Climb["Seek"](Hill_Climb["freeze"](time:seconds + gl_apoETA), Hill_Climb["freeze"](0), 0, Edv, 
+				Hill_Climb["Seek"](Hill_Climb["freeze"](time:seconds + ETA:APOAPSIS), Hill_Climb["freeze"](0), 0, Edv, 
 					{ 	parameter mnv. 
 						if Util_Vessel["tol"](mnv:orbit:periapsis, Target_Perapsis , Target_Tolerance) return 0. 
 						return -(abs(Target_Perapsis-mnv:orbit:periapsis) / Target_Perapsis)- (abs(IncTar-mnv:orbit:inclination)/2). 
@@ -120,12 +120,12 @@ local Util_Orbit is import("Util_Orbit").
 			set Edv to Util_Orbit["EccOrbitVel"](ship:orbit:periapsis, newsma)- Util_Orbit["EccOrbitVel"](ship:orbit:periapsis).
 			print "Estimated dv:" + Edv.
 			If IncTar = 1000{
-				Set n to Node(time:seconds + gl_perETA,0,0,Edv).
+				Set n to Node(time:seconds + ETA:PERIAPSIS,0,0,Edv).
 				Add n.
 			}
 			Else{
 			// use the following in the future to also conduct a change of inclination at the same time
-				Hill_Climb["Seek"](Hill_Climb["freeze"](time:seconds + gl_perETA), Hill_Climb["freeze"](0), 0, Edv, 
+				Hill_Climb["Seek"](Hill_Climb["freeze"](time:seconds + ETA:PERIAPSIS), Hill_Climb["freeze"](0), 0, Edv, 
 					{ 	parameter mnv. 
 						if Util_Vessel["tol"](mnv:orbit:apoapsis, Target_Apoapsis , Target_Tolerance) return 0. 
 						return -(abs(Target_Apoapsis-mnv:orbit:Apoapsis) / Target_Apoapsis)- (abs(IncTar-mnv:orbit:inclination)/2). 
@@ -169,7 +169,7 @@ local Util_Orbit is import("Util_Orbit").
 		Else {
 			Print "Adusting inc".
 			Hill_Climb["Seek"](
-				Hill_Climb["freeze"](time:seconds + gl_apoETA), Hill_Climb["freeze"](0), 0, Hill_Climb["freeze"](0), { parameter mnv. return -abs(mnv:orbit:inclination - Target_Inc). }
+				Hill_Climb["freeze"](time:seconds + ETA:APOAPSIS), Hill_Climb["freeze"](0), 0, Hill_Climb["freeze"](0), { parameter mnv. return -abs(mnv:orbit:inclination - Target_Inc). }
 			).
 			OrbMnvNode["Node_exec"](int_Warp).
 		} //end else

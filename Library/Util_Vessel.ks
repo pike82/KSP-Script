@@ -48,7 +48,7 @@ FUNCTION ff_Tolerance {
 FUNCTION ff_COMMS {
 	PARAMETER stagewait IS 0.1.
 
-	IF SHIP:Q < 0.005 {
+	IF SHIP:Q < 0.0045 {
 		FOR antenna IN SHIP:MODULESNAMED("ModuleRTAntenna") {
 			IF antenna:HASEVENT("activate") {
 				antenna:DOEVENT("activate").
@@ -68,6 +68,9 @@ parameter event.
 	}
 }// End Function
 
+
+//TODO:Incorperate these as functions
+//Lock gl_SEALEVELGRAVITY to body:mu / (body:radius)^2. // returns the sealevel gravity for any body that is being orbited.
 	
 /////////////////////////////////////////////////////////////////////////////////////
 //Export list of functions that can be called externally for the mission file	to use

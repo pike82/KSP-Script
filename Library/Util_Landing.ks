@@ -49,15 +49,17 @@ function ff_Suicide_info{
 
 Function ff_SuBurn {	
 Parameter ThrottelStartUp is 0.1, SafeAlt is 50, EndVelocity is 1. // end velocity must be positive
+	Set Flight_Arr to flight["Fall"].
 
-	Until gl_fallDist < ( gl_baseALTRADAR + SafeAlt + (ThrottelStartUp * ship:verticalspeed)){ 
+	Until Flight_Arr["fallDist"] < ( gl_baseALTRADAR + SafeAlt + (ThrottelStartUp * ship:verticalspeed)){ 
 		//Run screen update loop to inform of suicide burn wait.
+		Set Flight_Arr to flight["Fall"].
 		Clearscreen.
 		Print "maxStopAcc:" + maxStopAcc.
-		Print "gl_fallTime:" + gl_fallTime.
-		Print "gl_fallVel:" + gl_fallVel.
-		Print "gl_fallDist:" + gl_fallDist.
-		Print "gl_fallBurnTime:" + Util_Engine["burn_time"](gl_fallVel).
+		Print "gl_fallTime:" + Flight_Arr["fallTime"].
+		Print "gl_fallVel:" + Flight_Arr["fallVel"].
+		Print "gl_fallDist:" + Flight_Arr["fallDist"].
+		Print "gl_fallBurnTime:" + Util_Engine["burn_time"](Flight_Arr["fallVel"]).
 		Wait 0.001.
 	}
 
@@ -80,9 +82,9 @@ Parameter ThrottelStartUp is 0.1, SafeAlt is 50, EndVelocity is 1. // end veloci
 // Function ff_CABLand{ 
 	// Parameter ThrottelStartUp is 0.1, SafeAlt is 50, TargetLatLng is "Null", MaxSlopeAng is 1.
 	
-	// Set PePos to positionat(Ship, gl_perEta + TIME:SECONDS).
+	// Set PePos to positionat(Ship, ETA:PERIAPSIS + TIME:SECONDS).
 	// Set ShipPeUpVec to PePos - body:position.
-	// Set PEVec to velocityat(Ship, gl_perEta + TIME:SECONDS):Surface.
+	// Set PEVec to velocityat(Ship, ETA:PERIAPSIS + TIME:SECONDS):Surface.
 	
 	// //horz
 	// Set PeHorzVel to PEVec:mag. // its known at PE the verVel is Zero so all velocity must be horizontal
@@ -136,8 +138,8 @@ Parameter ThrottelStartUp is 0.1, SafeAlt is 50, EndVelocity is 1. // end veloci
 
 
 	
-	// Until gl_perEta < HorzBurnTime {
-	// lock steering to lookdirup(-ship:velocity:surface, gl_Top). //point retrograde
+	// Until ETA:PERIAPSIS < HorzBurnTime {
+	// lock steering to - vcrs(SHIP:UP:VECTOR,SHIP:FACING:STARVECTOR) //point retrograde to the horizon
 		// Clearscreen.
 		// Print PeHorzVel.
 		// Print PeVerBurnDist.
@@ -145,7 +147,7 @@ Parameter ThrottelStartUp is 0.1, SafeAlt is 50, EndVelocity is 1. // end veloci
 		// Print HorzBurnTime.
 		// Print VerBurnTime.
 		// Print totalBurnTime.
-		// Print gl_perEta.
+		// Print ETA:PERIAPSIS.
 		// wait 0.01.
 	// }
 	// Print "Starting CAB".
@@ -161,7 +163,7 @@ Parameter ThrottelStartUp is 0.1, SafeAlt is 50, EndVelocity is 1. // end veloci
 		// wait 0.01.
 	// }
 	// Lock Throttle to 0.0.
-	// lock steering to gl_up. // point upwards
+	// lock steering to ship:up:vector. // point upwards
 // } //End of Function
 
 // ////////////////////////////////////////////////////////////////
@@ -205,16 +207,16 @@ Function ff_goodLand{
 	//Body Rotation
 	
 	Set Bod_rot to Ship:Body:RotationPeriod.
-	Set Bod_Ang_Ajust to (gl_perEta /Bod_rot)*360. //angle of roation the body will incur before the ship get to the PE
+	Set Bod_Ang_Ajust to (ETA:PERIAPSIS /Bod_rot)*360. //angle of roation the body will incur before the ship get to the PE
 	//Set Bod_rot_Dir to Ship:Body:Angularvel 
 	//TODO: work out how to tell if the orbit is in the same direction as the body rotation.
 	
-	Set PePos to positionat(Ship, gl_perEta + TIME:SECONDS). //Returns the ship-raw position at the PE
+	Set PePos to positionat(Ship, ETA:PERIAPSIS + TIME:SECONDS). //Returns the ship-raw position at the PE
 	Set PePos to ship:Body:GEOPOSITIONOF(PePos). //Converts the predicted PE into geo-cordinates
 	Set PePos:Lat to PePos:Lat - Bod_Ang_Ajust. //TODO: Ensure this does not need a Clamp angle function for multiple roations or large values that make things negative
 
 	//Set ShipPeUpVec to PePos - body:position.
-	Set PEVec to velocityat(Ship, gl_perEta + TIME:SECONDS):Surface.
+	Set PEVec to velocityat(Ship, ETA:PERIAPSIS + TIME:SECONDS):Surface.
 	//horz
 	Set PeHorzVel to PEVec:mag. // its known at PE the verVel is Zero so all velocity must be horizontal
 	//Vertical
@@ -269,8 +271,8 @@ Function ff_goodLand{
 	}
 	
 		
-	Until gl_perEta < HorzBurnTime {
-	lock steering to lookdirup(-ship:velocity:surface, gl_Top). //point retrograde
+	Until ETA:PERIAPSIS < HorzBurnTime {
+	lock steering to - vcrs(SHIP:UP:VECTOR,SHIP:FACING:STARVECTOR) //point retrograde to the horizon
 		Clearscreen.
 		Print PeHorzVel.
 		Print PeVerBurnDist.
@@ -278,7 +280,7 @@ Function ff_goodLand{
 		Print HorzBurnTime.
 		Print VerBurnTime.
 		Print totalBurnTime.
-		Print gl_perEta.
+		Print ETA:PERIAPSIS.
 		wait 0.01.
 	}
 	Print "Starting CAB".
@@ -294,7 +296,7 @@ Function ff_goodLand{
 		wait 0.01.
 	}
 	Lock Throttle to 0.0.
-	lock steering to gl_up. // point upwards
+	lock steering to ship:up:vector. // point upwards
 } //End of Function
 
 ////////////////////////////////////////////////////////////////
@@ -364,6 +366,8 @@ Parameter lastdt, lastLat, lastLng.
 	Set SteerDirection to UP + r(-NorthDirection,-EastDirection,180). // r(pitch, yaw, roll) set roll to zero, this will allow pitch to equal Lat(North) direction required and Yaw(East) to equal Long direction required		
 	Lock Throttle to ThrottSetting.	
 	
+	Set Flight_Arr to flight["Fall"].
+	
 	ClearScreen.
 	Print "Landing".		
 	Print "===============================".		
@@ -401,8 +405,8 @@ Parameter lastdt, lastLat, lastLng.
 	Print "True Bearing: " + hf_gs_bearing(gl_shipLatLng,gl_NORTHPOLE).
 	Print "===============================".
 	Print "Base fall time: " + sqrt((2*gl_baseALTRADAR)/(gl_GRAVITY)).
-	Print "Fall time: " + gl_fallTime.	
-	Print "Fall vel: " + gl_fallVel.
+	Print "Fall time: " + Flight_Arr["fallTime"].	
+	Print "Fall vel: " + Flight_Arr["fallVel"].
 
 	
 	Set lastLat to gl_shipLatLng:Lat.

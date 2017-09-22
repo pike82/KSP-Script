@@ -4,6 +4,7 @@
 ///// Download Dependant libraies
 local Util_Engine is import("Util_Engine").
 local Util_Landing is import("Util_Landing").
+local flight is import("flight").
 
 ///////////////////////////////////////////////////////////////////////////////////
 ///// List of functions that can be called externally
@@ -21,15 +22,17 @@ local Util_Landing is import("Util_Landing").
 
 Function ff_SuBurn {	
 Parameter ThrottelStartUp is 0.1, SafeAlt is 50, EndVelocity is 1. // end velocity must be positive
+	Set Flight_Arr to flight["Fall"].
 
-	Until gl_fallDist < ( gl_baseALTRADAR + SafeAlt + (ThrottelStartUp * ship:verticalspeed)){ 
+	Until Flight_Arr["fallDist"] < ( gl_baseALTRADAR + SafeAlt + (ThrottelStartUp * ship:verticalspeed)){ 
 		//Run screen update loop to inform of suicide burn wait.
+		Set Flight_Arr to flight["Fall"].
 		Clearscreen.
 		Print "maxStopAcc:" + maxStopAcc.
-		Print "gl_fallTime:" + gl_fallTime.
-		Print "gl_fallVel:" + gl_fallVel.
-		Print "gl_fallDist:" + gl_fallDist.
-		Print "gl_fallBurnTime:" + Util_Engine["burn_time"](gl_fallVel).
+		Print "gl_fallTime:" + Flight_Arr["fallTime"].
+		Print "gl_fallVel:" + Flight_Arr["fallVel"].
+		Print "gl_fallDist:" + Flight_Arr["fallDist"].
+		Print "gl_fallBurnTime:" + Util_Engine["burn_time"](Flight_Arr["fallVel"]).
 		Wait 0.001.
 	}
 
@@ -86,14 +89,14 @@ Function ff_CABLand{
 	//Determine Body Rotation during transit to landing
 	Set Bod_rot to Ship:Body:RotationPeriod.
 	Print "Bod_rot " + Bod_rot.
-	Set Bod_Ang_Ajust to (gl_perEta /Bod_rot)*360. //angle of roation the body will incur before the ship get to the PE
+	Set Bod_Ang_Ajust to (ETA:PERIAPSIS /Bod_rot)*360. //angle of roation the body will incur before the ship get to the PE
 	Print "Bod_Ang_Ajust " + Bod_Ang_Ajust.
 	Set Bod_rot_Dir to Ship:Body:Angularvel.
 	Print "Bod_rot_Dir " + Bod_rot_Dir.
 
 	
 	//TODO: work out how to tell if the orbit is in the same direction as the body rotation.
-	Set PePos to positionat(Ship, gl_perEta + TIME:SECONDS). //Returns the ship-raw position at the PE
+	Set PePos to positionat(Ship, ETA:PERIAPSIS + TIME:SECONDS). //Returns the ship-raw position at the PE
 	Set PePos to ship:Body:GEOPOSITIONOF(PePos). //Converts the predicted PE into geo-cordinates
 	Print "Int PePos " + PePos:Lat.
 	Set PePos:Lat to PePos:Lat - Bod_Ang_Ajust. //TODO: Ensure this does not need a Clamp angle function for multiple roations or large values that make things negative
@@ -103,7 +106,7 @@ Function ff_CABLand{
 	Set Orbitarr to Orbit_Calc["OrbitSplitVel"]().
 
 	//Set ShipPeUpVec to PePos - body:position.
-	Set PEVec to velocityat(Ship, gl_perEta + TIME:SECONDS):Surface.
+	Set PEVec to velocityat(Ship, ETA:PERIAPSIS + TIME:SECONDS):Surface.
 	Print "Vel at PE "+PEVec:mag.
 	//horizontal
 	Set PeHorzVel to PEVec:mag. // its known at PE the verVel is Zero so all velocity must be horizontal	
@@ -155,10 +158,10 @@ Function ff_CABLand{
 	
 	If HeightafterHorzBurn > PeFallDist{
 	// then we know that we can burn purely horizontal then conduct as a vertical suicide burn afterwards.
-		lock steering to - vxcl(ship:up:vector, ship:velocity:surface). //point retrograde perperdicular to the ground
+		lock steering to - vcrs(SHIP:UP:VECTOR,SHIP:FACING:STARVECTOR) //point retrograde to the horizon
 		//We also want to chack how accurate our Vertical drop during burn estimate was.
 		Set BurnStartHeight to Altitude.
-		until gl_perEta < HorzBurnTime { //a waiting routine until the correct burn start time arrives. Wait until has not been used as this way aloows measurments and print screens in the mean time if desired.
+		until ETA:PERIAPSIS < HorzBurnTime { //a waiting routine until the correct burn start time arrives. Wait until has not been used as this way aloows measurments and print screens in the mean time if desired.
 			wait 0.01. 
 		}
 		Print "Undertaking Horizontal Only Burn".
@@ -168,7 +171,7 @@ Function ff_CABLand{
 			wait 0.01.
 		}
 		Lock Throttle to 0.0.
-		lock steering to gl_up. // point upwards
+		lock steering to ship:up:vector. // point upwards
 		Print "Horizontal only Burn has ended".
 		
 		Print "Burn Fall distance " + BurnStartHeight - BurnFinishHeight.
@@ -203,8 +206,8 @@ Function ff_CABLand{
 	
 	
 		
-	Until gl_perEta < HorzBurnTime {
-	lock steering to lookdirup(-ship:velocity:surface, gl_Top). //point retrograde
+	Until ETA:PERIAPSIS < HorzBurnTime {
+	lock steering to ship:retrograde. //point retrograde
 		Clearscreen.
 		Print PeHorzVel.
 		Print PeVerBurnDist.
@@ -212,7 +215,7 @@ Function ff_CABLand{
 		Print HorzBurnTime.
 		Print VerBurnTime.
 		Print totalBurnTime.
-		Print gl_perEta.
+		Print ETA:PERIAPSIS.
 		wait 0.01.
 	}
 	Print "Starting CAB".
@@ -228,7 +231,7 @@ Function ff_CABLand{
 		wait 0.01.
 	}
 	Lock Throttle to 0.0.
-	lock steering to gl_up. // point upwards
+	lock steering to ship:up:vector. // point upwards
 } //End of Function
 
 ////////////////////////////////////////////////////////////////
@@ -298,6 +301,8 @@ Parameter lastdt, lastLat, lastLng.
 	Set SteerDirection to UP + r(-NorthDirection,-EastDirection,180). // r(pitch, yaw, roll) set roll to zero, this will allow pitch to equal Lat(North) direction required and Yaw(East) to equal Long direction required		
 	Lock Throttle to ThrottSetting.	
 	
+	Set Flight_Arr to flight["Fall"].
+	
 	ClearScreen.
 	Print "Landing".		
 	Print "===============================".		
@@ -335,8 +340,8 @@ Parameter lastdt, lastLat, lastLng.
 	Print "True Bearing: " + hf_gs_bearing(gl_shipLatLng,gl_NORTHPOLE).
 	Print "===============================".
 	Print "Base fall time: " + sqrt((2*gl_baseALTRADAR)/(gl_GRAVITY)).
-	Print "Fall time: " + gl_fallTime.	
-	Print "Fall vel: " + gl_fallVel.
+	Print "Fall time: " + Flight_Arr["fallTime"].	
+	Print "Fall vel: " + Flight_Arr["fallVel"].
 
 	
 	Set lastLat to gl_shipLatLng:Lat.
