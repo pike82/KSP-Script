@@ -8,7 +8,8 @@
 		"FLAMEOUT", ff_STAGEFLAMEOUT@,
 		"stage_delta_v", ff_stage_delta_v@,
 		"burn_time", ff_burn_time@,
-		"mdot", ff_mdot@
+		"mdot", ff_mdot@,
+		"Vel_Exhaust", ff_Vel_Exhaust@
 	).
 
 /////////////////////////////////////////////////////////////////////////////////////	
@@ -194,6 +195,24 @@ function ff_mdot {
 	
 ///////////////////////////////////////////////////////////////////////////////////	
 	
+	
+function ff_Vel_Exhaust {
+	local g is 9.81.  // Gravitational acceleration constant used in game for Isp Calculation (m/s²)
+	local engine_count is 0.
+	local thrust is 0.
+	local isp is 0. // Engine ISP (s)
+	list engines in all_engines.
+	for en in all_engines if en:ignition and not en:flameout {
+	  set thrust to thrust + en:availablethrust.
+	  set isp to isp + en:isp.
+	  set engine_count to engine_count + 1.
+	}
+	set isp to isp / engine_count.
+	set thrust to thrust * 1000. // Engine Thrust (kg * m/s²)
+	return g *(isp/thrust). //
+}/// End Function
+	
+///////////////////////////////////////////////////////////////////////////////////	
 	
 /////////////////////////////////////////////////////////////////////////////////////
 //Export list of functions that can be called externally for the mission file	to use

@@ -4,6 +4,9 @@
 ///// Download Dependant libraies
 local Util_Engine is import("Util_Engine").
 local Util_Vessel is import("Util_Vessel").
+local Util_Launch is import("Util_Launch").
+local Util_Engine is import("Util_Engine").
+local Util_Orbit is import("Util_Orbit").
 
 ///////////////////////////////////////////////////////////////////////////////////
 ///// List of functions that can be called externally
@@ -165,22 +168,21 @@ Function ff_GravityTurnPres{
 	PARAMETER PresMultiple is 1.0.	
 	
 	Set MaxQ to 0.
-	Set gravPitch to sv_anglePitchover.	///Intital setup
-	LOCK STEERING TO HEADING(sv_intAzimith, gravPitch). //move to pitchover angle
+	Set intPitch to sv_anglePitchover.	///Intital setup
+	LOCK STEERING TO HEADING(sv_intAzimith, intPitch). //move to pitchover angle
 	SET ATMPGround TO SHIP:SENSORS:PRES.
 	
-	SET fullySteeredAngle to 90 - waitPitch.
 	LOCK atmp to ship:sensors:pres.
 	LOCK atmoDensity to atmp / atmpGround.
 
-	LOCK firstPhasePitch to (gravPitch * atmoDensity).
-	LOCK STEERING to HEADING(azimuth, firstPhasePitch).
+	LOCK currPitch to (intPitch * atmoDensity).
+	LOCK STEERING to HEADING(sv_intAzimith, currPitch).
 	UNTIL SHIP:Apoapsis > sv_targetAltitude {
 		Util_Engine["Flameout"]().
 		Util_Vessel["FAIRING"]().
 		Util_Vessel["COMMS"]().
 	}
-	UNLOCK firstPhasePitch.
+	UNLOCK currPitch.
 	UNLOCK atmoDensity.
 	UNLOCK atmp.
 
@@ -197,22 +199,27 @@ Function ff_Coast{ // intended to keep a low AoA and coast to Ap allowing anothe
 
 /////////////////////////////////////////////////////////////////////////////////////
 
-Function ff_InsertionPIDSpeed{ // PID Code stepping time to Apo
+Function ff_InsertionPIDSpeed{ // PID Code stepping time to Apo. Note this can only attempt to launch into a circular orbit
 PARAMETER 	ApTarget, Kp is 0.3, Ki is 0.0002, Kd is 12, PID_Min is -0.1, PID_Max is 0.1, 
 			vKp is -0.01, vKi is 0.0002, vKd is 12, vPID_Min is -10, vPID_Max is 1000.
 	
+	//TODOD: Find out the desired velocity of the AP Target and make this the desired velocity and have the loop cut out when the desired velocity is reached.
+	
 	Set highPitch to 30.	///Intital setup TODO: change this to reflect the current pitch
 	LOCK STEERING TO HEADING(sv_intAzimith, highPitch). //move to pitchover angle
-	Set PIDALT to PIDLOOP(vKp, vKi, vKd, vPID_Min, vPID_Max). // used to create a vertical speed
+	Set PIDALT to PIDLOOP(vKp/((ship:maxthrust/ship:mass)^2), vKi, vKd, vPID_Min, vPID_Max). // used to create a vertical speed
 	Set PIDALT:SETPOINT to 0. // What the altitude difference to be zero
 	//TODO: Look into making the vertical speed also dependant of the TWR as low thrust upper stages may want to keep a higher initial vertical speed.
 	
-	Set PIDAngle to PIDLOOP(Kp, Ki, Kd, PID_Min, PID_Max). // used to find a desired pitch angle from the vertical speed
+	Set PIDAngle to PIDLOOP(Kp, Ki, Kd, PID_Min, PID_Max). // used to find a desired pitch angle from the vertical speed. 
+		
 	
 	UNTIL ((SHIP:APOAPSIS > sv_targetAltitude) And (SHIP:PERIAPSIS > sv_targetAltitude))  OR (SHIP:APOAPSIS > sv_targetAltitude*1.1){
 		Util_Engine["Flameout"](1, 0.01).
 		Util_Vessel["FAIRING"]().
 		Util_Vessel["COMMS"]().
+		
+		Set PIDALT:KP to vKp/((ship:maxthrust/ship:mass)^2). //adjust the kp values and therefore desired vertical speed based on the TWR^2
 		
 		SET ALTSpeed TO PIDALT:UPDATE(TIME:SECONDS, ApTarget-ship:altitude). //update the PID with the altitude difference
 		Set PIDAngle:SETPOINT to ALTSpeed. // Sets the desired vertical speed for input into the pitch
@@ -249,84 +256,209 @@ PARAMETER 	ApTarget, Kp is 0.3, Ki is 0.0002, Kd is 12, PID_Min is -0.1, PID_Max
 	
 Function ff_InsertionPEG{ // PEG Code
 
+parameter tgt_pe. //target periapsis
+parameter tgt_ap. //target apoapsis
+parameter u. // target true anomaly in degrees(0 = insertion at Pe)
+parameter tgt_inc. //target inclination
+    
+    set ra to radius+tgt_ap. //full Ap
+    set rp to radius+tgt_pe. //full pe
 
-
-}// End of Function
+	//TODO: Look at replaceing some of the belwo with the Util Orbit Functions or including it in the Util orbit functions.
 	
+    local sma is (ra+rp)/2. //sma
+    local ecc is (ra-rp)/(ra+rp). //eccentricity
+    local vp is sqrt((2*mu*ra)/(rp*2*sma)).
+    local rc is (sma*(1-ecc^2))/(1+ecc*cos(u)). // this is the target radius based on the desire true anomoly
+    print "rc "+rc.
+    local vc is sqrt((vp^2) + 2*mu*((1/rc)-(1/rp))). // this is the target velocity at the target radius
+    print "vc "+vc.
+    local uc is 90 - arcsin((rp*vp)/(rc*vc)).
+    
+    set tgt_r to rc.
+    set tgt_vy to vc*sin(uc). // this is the split of the target velocity at the point in time
+    set tgt_vx to vc*cos(uc). // this is the split of the target velocity at the point in time
+    
+    set tgt_h to vcrs(v(tgt_r, 0, 0), v(tgt_vy, tgt_vx, 0)):mag.
 
-/////////////////////////////////////////////////////////////////////////////////////
+    Print("PEG convergence enabled").
+    
+    local last is missiontime. //missiontime is a KOS variable which gets this ingame Misson elased time for the craft
+    local A is 0. //peg variable
+    local B is 0. //peg variable
+    local C is 0. //peg variable
+    local converged is -10.
+    local delta is 0. //time between peg loops
+	local T is 180. //intial guess on time to thrust cut off
+	local peg_step is 0.1.
+    
+    local s_r is ship:orbit:body:distance.
+    //local s_acc tis ship:sensors:acc:mag.
+    local s_acc is ship:AVAILABLETHRUST/ship:mass.
+    local s_vy is ship:verticalspeed.
+    local s_vx is sqrt(ship:velocity:orbit:sqrmagnitude - ship:verticalspeed^2).
 	
-Function ff_Insertion5{ // PID Code stepping time to Apo
-
- LOCAL AZMPID IS PIDLOOP(0.1,0,0.05,-1, 1).
-    SET AZMPID:SETPOINT TO Tincl.
-
-    LOCAL FPAPID IS PIDLOOP(0.1,0.05,0.05,-1, 1).
-    SET FPAPID:SETPOINT TO Tperg.
-
-    LOCAL ROLLPID IS PIDLOOP(0.1,0,0.01,-1, 1).
-    SET ROLLPID:SETPOINT TO 0.
-    PRINT "INITIATING SECOND STAGE CLOSED LOOP CONTROL...". WAIT 2.
-    PRINT "SECOND STAGE IGNITION.".
-    STAGE.
-    UNLOCK STEERING.
-    UNTIL SHIP:MAXTHRUST = 0 {
-		SET FPAPID:SETPOINT TO altitude / 50000. // this change the setpoint at every loop 
+	local s_ve is Util_Engine["Vel_Exhaust"]().
+	local tau is s_ve/s_acc.
 	
-        SET SHIP:CONTROL:YAW   TO AZMPID:UPDATE(TIME:SECONDS, SHIP:INCLINATION).
-        SET SHIP:CONTROL:PITCH TO FPAPID:UPDATE(TIME:SECONDS, SHIP:APOAPSIS).
-        SET SHIP:CONTROL:ROLL  TO ROLLPID:UPDATE(TIME:SECONDS, SHIP:FACING:ROLL).
-        WAIT 0.01.
+    local peg is peg_cycle(A, B, T, 0, tau).  // inital run through the cycle with first estimations
+    wait 0.
+    
+	//Loop through updating the parameters until the break condition is met
+    until false {
+        
+        set s_r to ship:orbit:body:distance.
+		//set s_acc to ship:sensors:acc:mag.
+		set s_acc to ship:AVAILABLETHRUST/ship:mass.
+		set s_vy to ship:verticalspeed.
+		set s_vx to sqrt(ship:velocity:orbit:sqrmagnitude - ship:verticalspeed^2).
+		
+        set delta to missiontime - last. // set change to base time the PEG Started and now
+        Set last to missiontime. // create a new last MET 
+		
+        if(delta >= peg_step) {  // this is used to ensure a minimum time step occurs
+            
+            Set peg to peg_cycle(A, B, T, peg_step, tau).
+			
+            if abs( (T-2*peg_step)/peg[3] - 1 ) < 0.02 {  //if the time returned is within 2% of the old T guess to burnout allow convergence to progress 
+			
+                if converged < 0 {
+                    set converged to converged+1. //(this is done over ten ticks to ensure the convergence solution selected is accurate enough over ten ship location updates rather than relying on only one convergence solution to enter a closed loop)
+                } else if converged = 0 {
+                    set converged to 1.
+                    Print("closed loop enabled").
+                }
+            }
+
+            set A to peg[0].
+            set B to peg[1].
+            set C to peg[2].
+            set T to peg[3].
+            set delta to 0.
+        }
+
+        set s_pitch to (A + B*delta + C). //wiki Estimation fr,T = A + B*T + C 
+        set s_pitch to max(-1, min(s_pitch, 1)). // limit the pitch change to between 1 and -1 with is -90 and 90 degress
+        set s_pitch to arcsin(s_pitch). //covert into degress
+        
+        if converged = 1 {
+            set g_steer to heading(Util_Launch["FlightAzimuth"](tgt_inc, tgt_vx), s_pitch).
+			ClearScreen().
+			Print "closed loop Steering".
+			Print "Pitch: " + s_pitch.
+			Print "A: " + A.
+			Print "B: " + B.
+			Print "C: " + C.
+			Print "T: " + T.
+			Print "delta: " + delta.
+			Print "missiontime: " + missiontime.
+			
+            if(T - delta < 0.2) {
+                break. //break when the time left to burn minus the last step incriment  is less than 0.2 seconds remaining so we do not enter that last few step(s) where decimal and estmation accuracy becomes vital.
+            }
+        }
+        wait 0.
     }
+    
+    set g_thr to 0.
+    unlock throttle.
+    set ship:control:pilotmainthrottle to 0.
+    
+    Print "SECO".
+    for e in s_eng {
+        if e:ignition and e:allowshutdown {
+            //e:shutdown.
+        }
+    }
+    //set ship:control:neutralize to true.
+    set g_steer to ship:prograde.
+    wait 30.
+} // end of function
 
-}// End of Function	
-
-
-
-	// Parameter waitPitch is 0.
-	// Parameter targetApoeta is 120.
-
-	// SET fullySteeredAngle to 90 - waitPitch.
-	// SET ATMPGround TO SHIP:SENSORS:PRES.
-	// //SET atmp_end to 0.
-
-	// LOCK altitude to ALT:RADAR.
-	// LOCK atmp to ship:sensors:pres.
-	// LOCK atmoDensity to atmp / atmpGround.
-	// LOCK gl_apoeta to max(0,ETA:APOAPSIS).
-
-	// LOCK firstPhasePitch to fullySteeredAngle - (fullySteeredAngle * atmoDensity).
-	// LOCK STEERING to HEADING(azimuth, 90 - firstPhasePitch).
-	// UNTIL gl_apoeta >= targetApoeta {
-		// Staging["Flameout"]().
-		// Staging["FAIRING"]().
-		// Staging["COMMS"]().
-		// set endTurnAltitude to altitude.
-		// set endRurnOrbitSpeed to SHIP:VELOCITY:ORBIT:MAG.
-		// set secondPhasePitch to firstPhasePitch.
-	// }
-	// UNLOCK firstPhasePitch.
-	// UNLOCK STEERING.
-	// UNLOCK atmoDensity.
-	// UNLOCK atmp.
-
-//This is a possible insertion code to be looked at in the future.
 	
-	// SET atmoEndAltitude to 110000.
-	// SET tolerance to targetApoeta * 0.5.
-	// LOCK shipAngle to VANG(SHIP:UP:VECTOR, SHIP:SRFPROGRADE:VECTOR).
-	// LOCK correctiondAmp to (altitude - endTurnAltitude) / (atmoEndAltitude - endTurnAltitude).
-	// LOCK mx to shipAngle + (maxCorrection * correctiondAmp).
-	// LOCK mi to shipAngle - (maxCorrection * correctiondAmp).
-	// LOCK orbitSpeedFactor to ((targetOrbitSpeed - SHIP:VELOCITY:ORBIT:MAG) / (targetOrbitSpeed - endRurnOrbitSpeed)).
-	// LOCK tApoEta to targetApoeta * orbitSpeedFactor. 
-	// SET ae to 0.
-	// LOCK correction to max(-maxCorrection*0.3,((tApoEta - ae) / tolerance) * maxCorrection).
-	// LOCK secondPhasePitch to max(mi,min(mx, shipAngle - correction )).
-	// LOCK STEERING to HEADING(azimuth, 90 - secondPhasePitch).
+///////////////////////////////////////////////////////////////////////////////////
+//Helper function for the files functions
+/////////////////////////////////////////////////////////////////////////////////////
 
-//} // End of Function
+function hf_peg_cycle {
+    parameter oldA.
+    parameter oldB.
+    parameter oldT.
+    parameter delta.
+	parameter tau.
+    
+    
+    local A is 0.
+    local B is 0.
+    local C is 0.
+    local T is 0.
+	local s_ve is Util_Engine["Vel_Exhaust"]().
+    
+	///if first time through get inital A and B values
+    if oldA = 0 and oldB = 0 {
+        local ab is hf_peg_solve(oldT, tau).
+        set oldA to ab[0].
+        set oldB to ab[1].
+    }
+    
+    local Tm is oldT - delta.
+    
+    local h0 is vcrs(v(s_r, 0, 0), v(s_vy, s_vx, 0)):mag. //current angular momentum
+    local dh is tgt_h - h0. //angular momentum to gain
+    
+    set C to (mu/s_r^2 - s_vx^2/s_r)/s_acc. //portion of vehicle acceleration used to counteract gravity
+    local CT is (mu/tgt_r^2 - tgt_vx^2/tgt_r) / (s_acc / (1-(oldT/tau))). //Gravity and centrifugal force term at cutoff
+    
+    local frT is oldA + oldB*oldT + CT. //sin pitch at burnout
+    local fr is oldA + C. //sin pitch at current time
+    local frdot is (frT-fr)/oldT. //approximate rate of sin pitch
+    
+    local ft is 1 - (fr^2)/2. //cos pitch
+    local ftdot is -fr*frdot. //cos pitch speed
+    local ftdd is -(frdot^2)/2. //cos pitch acceleration
+    
+    local mean_r is (tgt_r + s_r)/2.
+    local dv is (dh/mean_r) + (s_ve*Tm*(ftdot+ftdd*tau)) + ((ftdd*s_ve*Tm^2)/2).
+    set dv to dv / (ft + ftdot*tau + ftdd*(tau^2)). // big equation from wiki near end of estimated
+    set T to tau*(1 - constant:e ^ (-dv/s_ve)). // estimated updated burnout time
+    debug("DV: "+dv).
+    
+    if(T >= peg_eps) {
+        local ab is hf_peg_solve(oldT, tau).
+        set A to ab[0].
+        set B to ab[1].
+    } else {
+        Print("terminal guidance enabled").
+        set A to oldA.
+        set B to oldB.
+    }
+    return list(A, B, C, T).
+}
+
+///////////////////////////////////////////////////////////////////////////////////
+
+// Estimate, returns A and B coefficient for guidance
+declare function hf_peg_solve {
+    parameter T.//Estimated time until burnout
+    parameter tau. // tau = ve/a which is the time to burn the vehicle completely if it were all propellant
 	
+	local s_ve is Util_Engine["Vel_Exhaust"]().
+
+    local b0 is -s_ve * ln(1 - (T/tau)). //Wiki eq 7a
+    local b1 is (b0*tau) - (s_ve*T). //Wiki eq 7b
+    local c0 is b0*T - b1. //Wiki eq 7c
+    local c1 is (c0*tau) - (s_ve * T^2)/2. //Wiki eq 7d
+    
+    local z0 is tgt_vy - s_vy.  //Wiki Major loop algortthm MB Matrix top
+    local z1 is (tgt_r - s_r) - s_vy*T. //Wiki Major loop algortthm MB Matrix bottom
+    
+    local d is (b0*c1 - b1*c0). // //Wiki Major loop algortthm intermediate stage to solve for Mx from Ma and Mb
+    
+    local B is (z1/c0 - z0/b0) / (c1/c0 - b1/b0). 
+    local A is (z0 - b1*B) / b0.
+    
+    return list(A, B).
+}
 ///////////////////////////////////////////////////////////////////////////////////
 //Export list of functions that can be called externally for the mission file	to use
 /////////////////////////////////////////////////////////////////////////////////////

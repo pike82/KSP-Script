@@ -139,7 +139,6 @@ Function intParameters {
 	///////////////////////
 	//Global Lock Parameters
 	//////////////////////
-
 //Engines
     lock gl_TWR to MAX( 0.001, MAXTHRUST / (ship:MASS*gl_GRAVITY)). //Provides the current thrust to weight ratio
 	lock gl_TWRTarget to min( gl_TWR, sv_maxGeeTarget*(9.81/gl_GRAVITY)). // enables the trust to be limited based on the TWR which is dependant on the local gravity compared to normal G forces
