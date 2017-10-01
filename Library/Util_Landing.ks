@@ -3,13 +3,13 @@
 
 ///// Download Dependant libraies
 local Util_Engine is import("Util_Engine").
+local Util_Vessel is import("Util_Vessel").
 
 ///////////////////////////////////////////////////////////////////////////////////
 ///// List of functions that can be called externally
 ///////////////////////////////////////////////////////////////////////////////////
 
 	local Util_landing is lex(
-		"Gravity",ff_Gravity@,
 		"Suicide_info", ff_Suicide_info@
 	).
 
@@ -17,19 +17,7 @@ local Util_Engine is import("Util_Engine").
 //File Functions
 ////////////////////////////////////////////////////////////////
 
-function ff_Gravity{
-	Parameter Surface_Elevation is gl_surfaceElevation.
-	Set SEALEVELGRAVITY to body:mu / (body:radius)^2. // returns the sealevel gravity for any body that is being orbited.
-	Set GRAVITY to body:mu / (ship:Altitude + body:radius)^2. //returns the current gravity experienced by the vessel	
-	Set AvgGravity to sqrt(		(	(GRAVITY^2) +((body:mu / (Surface_Elevation + body:radius)^2 )^2)		)/2		).// using Root mean square function to find the average gravity between the current point and the surface which have a squares relationship.
 
-	local arr is lexicon().
-	arr:add ("SLG", SEALEVELGRAVITY).
-	arr:add ("G", GRAVITY).
-	arr:add ("AVG", AvgGravity).
-	
-	Return (arr).
-}
 
 function ff_Suicide_info{
 	Parameter AvgGravity, distance is gl_baseALTRADAR.

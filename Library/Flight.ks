@@ -110,7 +110,7 @@
 		local vec_arr is ff_Vectors().
 	
 		Set ang_absaoa to vang(vec_arr["fore"],srfprograde:vector). //absolute angle of attack including yaw and pitch
-		lock gl_aoa to vang(vec_arr["top"],srfprograde:vector)-90. //pitch only component of angle of attack
+		Set ang_aoa to vang(vec_arr["top"],srfprograde:vector)-90. //pitch only component of angle of attack
 		set ang_sideslip to vang(vec_arr["right"],srfprograde:vector)-90. //yaw only component of aoa
 		set ang_rollangle to vang(vec_arr["right"],vec_righthor)*((90-vang(vec_arr["top"],vec_arr["righthor"]))/abs(90-vang(vec_arr["top"],vec_arr["righthor"]))). //roll angle, 0 at level flight
 		set ang_pitchangle to vang(vec_arr["fore"],vec_arr["forehor"])*((90-vang(vec_arr["fore"],vec_arr["up"]))/abs(90-vang(vec_arr["fore"],vec_arr["up"]))). //pitch angle, 0 at level flight

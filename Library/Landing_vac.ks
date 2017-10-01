@@ -4,6 +4,7 @@
 ///// Download Dependant libraies
 local Util_Engine is import("Util_Engine").
 local Util_Landing is import("Util_Landing").
+local Util_Vessel is import("Util_Vessel").
 local flight is import("flight").
 
 ///////////////////////////////////////////////////////////////////////////////////
@@ -123,7 +124,7 @@ Function ff_CABLand{
 	//PE Suicide Burn Calcls
 	
 	Set PeVerBurnDist to Orbit:Periapsis - (PePos:TERRAINHEIGHT + SafeAlt). 
-	Set Gravarr to Util_Landing["Gravity"](PeVerBurnDist).
+	Set Gravarr to Util_Vessel["Gravity"](PeVerBurnDist).
 	Set SuInfoarr to Util_Landing["Suicide_info"](Gravarr["AVG"],PeVerBurnDist).
 	Set PeFallTime to SuInfoarr["Time"].
 	Set PeFallVel to SuInfoarr["Vel"].
@@ -185,7 +186,7 @@ Function ff_CABLand{
 		//Current Suicide burn Calcs
 	
 		Set DistToStop to Altitude - gl_PeLatLng:TERRAINHEIGHT - SafeAlt. // Calculates the distance between the craft and the intended stopping height
-		Set CurrGravarr to Util_Landing["Gravity"](DistToStop).
+		Set CurrGravarr to Util_Vessel["Gravity"](DistToStop).
 		Set CurrSuInfoarr to Util_Landing["Suicide_info"](CurrGravarr["AVG"],DistToStop).
 		Set CurrFallTime to CurrSuInfoarr["Time"].
 		Set CurrFallVel to CurrSuInfoarr["Vel"].

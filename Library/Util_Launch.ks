@@ -132,8 +132,6 @@ function ff_FlightAzimuth {
 	// calculate compass heading
 	local az_corr is arctan2(vel_e, vel_n).
 	return az_corr.
-}
-
 
 }// End of Function
 

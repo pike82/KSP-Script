@@ -10,6 +10,7 @@
 		"tol", ff_Tolerance@,
 		"FAIRING",ff_FAIRING@,
 		"COMMS",ff_COMMS@,
+		"Gravity",ff_Gravity@,
 		"R_chutes", ff_R_chutes@
 	).
 
@@ -68,9 +69,19 @@ parameter event.
 	}
 }// End Function
 
+function ff_Gravity{
+	Parameter Surface_Elevation is gl_surfaceElevation.
+	Set SEALEVELGRAVITY to body:mu / (body:radius)^2. // returns the sealevel gravity for any body that is being orbited.
+	Set GRAVITY to body:mu / (ship:Altitude + body:radius)^2. //returns the current gravity experienced by the vessel	
+	Set AvgGravity to sqrt(		(	(GRAVITY^2) +((body:mu / (Surface_Elevation + body:radius)^2 )^2)		)/2		).// using Root mean square function to find the average gravity between the current point and the surface which have a squares relationship.
 
-//TODO:Incorperate these as functions
-//Lock gl_SEALEVELGRAVITY to body:mu / (body:radius)^2. // returns the sealevel gravity for any body that is being orbited.
+	local arr is lexicon().
+	arr:add ("SLG", SEALEVELGRAVITY).
+	arr:add ("G", GRAVITY).
+	arr:add ("AVG", AvgGravity).
+	
+	Return (arr).
+}
 	
 /////////////////////////////////////////////////////////////////////////////////////
 //Export list of functions that can be called externally for the mission file	to use

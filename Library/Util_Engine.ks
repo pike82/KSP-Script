@@ -21,8 +21,10 @@ FUNCTION ff_STAGEFLAMEOUT {
 	local engine_count is 0.
 	local EnginesFlameout is 0.
 	
+	Print "Flameout".
 	
 	If Ullage = "RCS"{ /// ie. Use RCS or nothing to provide ullage
+	Print "RCS Falmeout".
 		///The following determiines the number of engines in the current stage that are flamed out.
 		FOR eng IN engList {  //Loops through Engines in the Vessel
 			IF eng:STAGE >= STAGE:NUMBER { //Check to see if the engine is in the current Stage
@@ -32,6 +34,9 @@ FUNCTION ff_STAGEFLAMEOUT {
 				}
 			}
 		}
+		Print STAGE:NUMBER.
+		Print EnginesFlameout.
+		Print engine_count.
 		If engine_count = EnginesFlameout {
 		//All engines required have flamed out
 			local RCSState is RCS. //Get the Current RCS State
@@ -46,6 +51,7 @@ FUNCTION ff_STAGEFLAMEOUT {
 	}
 	
 	If Ullage = "boost"{ //i.e starp on solids or other boosters around a main engine that continues to burn
+	Print "Boost Falmeout".
 		///The following determiines the number of engines in the current stage that are flamed out.
 		FOR eng IN engList {  //Loops through Engines in the Vessel
 			IF eng:STAGE >= STAGE:NUMBER { //Check to see if the engine is in the current Stage
@@ -63,6 +69,7 @@ FUNCTION ff_STAGEFLAMEOUT {
 	}
 	
 	If Ullage = "hot"{ /// ie. Doing a hot stage
+	Print "hot Falmeout".
 		///The following determiines the number of engines in the current stage that are flamed out.
 		local timeRem is ff_burn_time(ff_stage_delta_v()).
 		If stageWait > timeRem{ //Stage wait is actually the amount of burn time left in the tanks before stating the hot stage
@@ -74,6 +81,7 @@ FUNCTION ff_STAGEFLAMEOUT {
 	}
 	
 	If Ullage = "half"{ /// ie. Doing a half stage like atlas
+	Print "half Falmeout".
 		///The following determiines the number of engines in the current stage that are flamed out.
 		local timeRem is ff_burn_time(ff_stage_delta_v()).
 		If stageWait > timeRem{ //Stage wait is actually the amount of burn time left in the tanks before stating the half staging
@@ -83,6 +91,7 @@ FUNCTION ff_STAGEFLAMEOUT {
 	}
 	
 	If Ullage = "fuel"{ /// ie. Doing a stage dependant on fuel remainng
+	Print "fuel Falmeout".
 		If ResFrac > 0 {
 		/// the following determines the lowest fraction of fuel remaining in the current staged engines tanks.
 			local lowCap is 1.
@@ -208,8 +217,8 @@ function ff_Vel_Exhaust {
 	  set engine_count to engine_count + 1.
 	}
 	set isp to isp / engine_count.
-	set thrust to thrust * 1000. // Engine Thrust (kg * m/s²)
-	return g *(isp/thrust). //
+	//set thrust to thrust. // Engine Thrust (kg * m/s²)
+	return g *isp.///thrust). //
 }/// End Function
 	
 ///////////////////////////////////////////////////////////////////////////////////	

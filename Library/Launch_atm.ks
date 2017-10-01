@@ -3,6 +3,7 @@
 
 ///// Download Dependant libraies
 local Util_Engine is import("Util_Engine").
+local Flight is import("Flight").
 local Util_Vessel is import("Util_Vessel").
 local Util_Launch is import("Util_Launch").
 local Util_Engine is import("Util_Engine").
@@ -125,12 +126,11 @@ Function ff_GravityTurnAoA{
 	Set StartLogtime to TIME:SECONDS.
 	//Log "# Time, # grav pitch, # AoA, # dPitch, # PTerm , # ITerm , # DTerm" to AOA.csv.
 	
-	UNTIL (SHIP:Q < MaxQ*0.1) {  //this will need to change so it is not hard set.
-		Util_Engine["Flameout"](Flametime).
-		Util_Vessel["FAIRING"]().
-		Util_Vessel["COMMS"]().
+	UNTIL (SHIP:Q < MaxQ*0.05) {  //this will need to change so it is not hard set.
+		Set Angles to Flight["Angles"]().
+		Set angofAttack to Angles["aoa"].
 
-		SET dPitch TO PIDAngle:UPDATE(TIME:SECONDS, gl_AoA).
+		SET dPitch TO PIDAngle:UPDATE(TIME:SECONDS,angofAttack).
 		// you can also get the output value later from the PIDLoop object
 		// SET OUT TO PID:OUTPUT.
 		Set gravPitch to max(min(sv_anglePitchover,(gravPitch + dPitch)),0). //current pitch setting plus the change from the PID
@@ -138,7 +138,10 @@ Function ff_GravityTurnAoA{
 			Set MaxQ to SHIP:Q.
 		}
 		Clearscreen.
-		Print "AOA: "+(gl_AoA).
+		Util_Engine["Flameout"]().
+		Util_Vessel["FAIRING"]().
+		Util_Vessel["COMMS"]().
+		Print "AOA: "+ angofAttack.
 		Print "Delta Pitch: "+(dPitch).
 		Print "Setpoint Pitch: "+(gravPitch).
 		Print "Q: "+(SHIP:Q).
@@ -215,7 +218,7 @@ PARAMETER 	ApTarget, Kp is 0.3, Ki is 0.0002, Kd is 12, PID_Min is -0.1, PID_Max
 		
 	
 	UNTIL ((SHIP:APOAPSIS > sv_targetAltitude) And (SHIP:PERIAPSIS > sv_targetAltitude))  OR (SHIP:APOAPSIS > sv_targetAltitude*1.1){
-		Util_Engine["Flameout"](1, 0.01).
+		Util_Engine["Flameout"]().
 		Util_Vessel["FAIRING"]().
 		Util_Vessel["COMMS"]().
 		
@@ -258,20 +261,27 @@ Function ff_InsertionPEG{ // PEG Code
 
 parameter tgt_pe. //target periapsis
 parameter tgt_ap. //target apoapsis
-parameter u. // target true anomaly in degrees(0 = insertion at Pe)
 parameter tgt_inc. //target inclination
+parameter u is 0. // target true anomaly in degrees(0 = insertion at Pe)
+
     
-    set ra to radius+tgt_ap. //full Ap
-    set rp to radius+tgt_pe. //full pe
+    set ra to body:radius + tgt_ap. //full Ap
+    set rp to body:radius + tgt_pe. //full pe
+	Print "tgtra " + tgt_ap.
+	Print "tgtrp " + tgt_pe.
+	Print body:radius.
+	Print "ra " + ra.
+	Print "rp " + rp.
 
 	//TODO: Look at replaceing some of the belwo with the Util Orbit Functions or including it in the Util orbit functions.
 	
     local sma is (ra+rp)/2. //sma
     local ecc is (ra-rp)/(ra+rp). //eccentricity
-    local vp is sqrt((2*mu*ra)/(rp*2*sma)).
+    local vp is sqrt((2*body:mu*ra)/(rp*2*sma)).
+	Print "vp " +vp.
     local rc is (sma*(1-ecc^2))/(1+ecc*cos(u)). // this is the target radius based on the desire true anomoly
     print "rc "+rc.
-    local vc is sqrt((vp^2) + 2*mu*((1/rc)-(1/rp))). // this is the target velocity at the target radius
+    local vc is sqrt((vp^2) + 2*body:mu*((1/rc)-(1/rp))). // this is the target velocity at the target radius
     print "vc "+vc.
     local uc is 90 - arcsin((rp*vp)/(rc*vc)).
     
@@ -281,7 +291,7 @@ parameter tgt_inc. //target inclination
     
     set tgt_h to vcrs(v(tgt_r, 0, 0), v(tgt_vy, tgt_vx, 0)):mag.
 
-    Print("PEG convergence enabled").
+    Print "PEG convergence enabled".
     
     local last is missiontime. //missiontime is a KOS variable which gets this ingame Misson elased time for the craft
     local A is 0. //peg variable
@@ -289,21 +299,22 @@ parameter tgt_inc. //target inclination
     local C is 0. //peg variable
     local converged is -10.
     local delta is 0. //time between peg loops
-	local T is 180. //intial guess on time to thrust cut off
+	local T is 100. //intial guess on time to thrust cut off
 	local peg_step is 0.1.
     
     local s_r is ship:orbit:body:distance.
     //local s_acc tis ship:sensors:acc:mag.
     local s_acc is ship:AVAILABLETHRUST/ship:mass.
+	Print "s_acc " + s_acc.
     local s_vy is ship:verticalspeed.
     local s_vx is sqrt(ship:velocity:orbit:sqrmagnitude - ship:verticalspeed^2).
 	
 	local s_ve is Util_Engine["Vel_Exhaust"]().
 	local tau is s_ve/s_acc.
 	
-    local peg is peg_cycle(A, B, T, 0, tau).  // inital run through the cycle with first estimations
+    local peg is hf_peg_cycle(A, B, T, peg_step, tau, tgt_vy, tgt_vx, tgt_r, s_vy, s_vx, s_r, s_acc).  // inital run through the cycle with first estimations
     wait 0.
-    
+    Print "Entering Convergence loop".
 	//Loop through updating the parameters until the break condition is met
     until false {
         
@@ -312,66 +323,81 @@ parameter tgt_inc. //target inclination
 		set s_acc to ship:AVAILABLETHRUST/ship:mass.
 		set s_vy to ship:verticalspeed.
 		set s_vx to sqrt(ship:velocity:orbit:sqrmagnitude - ship:verticalspeed^2).
-		
+		Set tau to s_ve/s_acc.
         set delta to missiontime - last. // set change to base time the PEG Started and now
-        Set last to missiontime. // create a new last MET 
+		Print "Mission Time " + missiontime.
+        //Set last to missiontime. // create a new last MET for the next loop
+		Print "delta " + delta.
+		Print "peg_step " + peg_step.
 		
-        if(delta >= peg_step) {  // this is used to ensure a minimum time step occurs
-            
-            Set peg to peg_cycle(A, B, T, peg_step, tau).
-			
-            if abs( (T-2*peg_step)/peg[3] - 1 ) < 0.02 {  //if the time returned is within 2% of the old T guess to burnout allow convergence to progress 
-			
+        if(delta >= peg_step) {  // this is used to ensure a minimum time step occurs before undertaking the next peg cycle
+            Print "Convergence Step".
+			Set peg to hf_peg_cycle(A, B, T, delta, tau, tgt_vy, tgt_vx, tgt_r, s_vy, s_vx, s_r, s_acc).
+			Set last to missiontime.
+			if abs( (T-2*delta)/peg[3]-1 ) < 0.01 {  //if the time returned is within 1% of the old T guess to burnout allow convergence to progress 
+				//ClearScreen.
                 if converged < 0 {
                     set converged to converged+1. //(this is done over ten ticks to ensure the convergence solution selected is accurate enough over ten ship location updates rather than relying on only one convergence solution to enter a closed loop)
+					Print "Convergence step +1".
                 } else if converged = 0 {
                     set converged to 1.
                     Print("closed loop enabled").
                 }
-            }
+            } 
 
             set A to peg[0].
             set B to peg[1].
             set C to peg[2].
             set T to peg[3].
-            set delta to 0.
+            
         }
 
-        set s_pitch to (A + B*delta + C). //wiki Estimation fr,T = A + B*T + C 
-        set s_pitch to max(-1, min(s_pitch, 1)). // limit the pitch change to between 1 and -1 with is -90 and 90 degress
-        set s_pitch to arcsin(s_pitch). //covert into degress
-        
+        //set s_pitch to (A + B*T + C). //wiki Estimation fr,T = A + B*T + C noting T in this instance is the T until the estimated next step so its really delta or just zero if you consider what it should be now.
+        set s_pitch to (A + B*delta + C). //wiki Estimation fr,T = A + B*T + C noting T in this instance is the T until the estimated next step so its really delta or just zero if you consider what it should be now.
+		//set s_pitch to max(-1, min(s_pitch, 1)). // limit the pitch change to between 1 and -1 with is -90 and 90 degress
+        //set s_pitch to arcsin(s_pitch). //covert into degress
+		
         if converged = 1 {
-            set g_steer to heading(Util_Launch["FlightAzimuth"](tgt_inc, tgt_vx), s_pitch).
-			ClearScreen().
+
+			If Util_Vessel["Tol"](orbit:inclination, tgt_inc, 0.1){
+				LOCK STEERING TO heading(ship:heading, s_pitch).
+			}Else{
+				LOCK STEERING TO heading(Util_Launch["FlightAzimuth"](tgt_inc, tgt_vx), s_pitch).
+			}
+			ClearScreen.
 			Print "closed loop Steering".
 			Print "Pitch: " + s_pitch.
+			Print (A + B*T + C).
 			Print "A: " + A.
 			Print "B: " + B.
 			Print "C: " + C.
 			Print "T: " + T.
+			Print "CT:" + peg[4].
+			Print "dv:" + peg[5].
 			Print "delta: " + delta.
 			Print "missiontime: " + missiontime.
+			Print abs(T - delta).
 			
-            if(T - delta < 0.2) {
+            if(abs(T - delta) < 1) {
                 break. //break when the time left to burn minus the last step incriment  is less than 0.2 seconds remaining so we do not enter that last few step(s) where decimal and estmation accuracy becomes vital.
             }
         }
-        wait 0.
+
+        wait 0.01. 
     }
     
-    set g_thr to 0.
-    unlock throttle.
+	Unlock STEERING.
+	LOCK Throttle to 0.
     set ship:control:pilotmainthrottle to 0.
     
-    Print "SECO".
-    for e in s_eng {
-        if e:ignition and e:allowshutdown {
-            //e:shutdown.
-        }
-    }
+    // Print "SECO".
+    // for e in s_eng {
+        // if e:ignition and e:allowshutdown {
+            // //e:shutdown.
+        // }
+    // }
     //set ship:control:neutralize to true.
-    set g_steer to ship:prograde.
+    //set g_steer to ship:prograde.
     wait 30.
 } // end of function
 
@@ -381,58 +407,95 @@ parameter tgt_inc. //target inclination
 /////////////////////////////////////////////////////////////////////////////////////
 
 function hf_peg_cycle {
-    parameter oldA.
-    parameter oldB.
-    parameter oldT.
+    parameter A.
+    parameter B.
+    parameter T.
     parameter delta.
 	parameter tau.
+	parameter tgt_vy.
+	parameter tgt_vx.
+	parameter tgt_r.
+	parameter s_vy.
+	parameter s_vx.
+	parameter s_r.
+	parameter s_acc.
     
-    
-    local A is 0.
-    local B is 0.
-    local C is 0.
-    local T is 0.
 	local s_ve is Util_Engine["Vel_Exhaust"]().
     
 	///if first time through get inital A and B values
-    if oldA = 0 and oldB = 0 {
-        local ab is hf_peg_solve(oldT, tau).
-        set oldA to ab[0].
-        set oldB to ab[1].
+    if A = 0 and B = 0 {
+        local ab is hf_peg_solve(T, tau, tgt_vy, tgt_r, s_vy, s_r).
+        set A to ab[0].
+        set B to ab[1].
     }
-    
-    local Tm is oldT - delta.
-    
+    Print "s_r: " + s_r.
+    local T_dash is T - delta.
+	local A_dash is A - delta*B.
+	local B_dash is B.
+    Print "delta: " + delta.
     local h0 is vcrs(v(s_r, 0, 0), v(s_vy, s_vx, 0)):mag. //current angular momentum
+	Print "h0: " + h0.
     local dh is tgt_h - h0. //angular momentum to gain
-    
-    set C to (mu/s_r^2 - s_vx^2/s_r)/s_acc. //portion of vehicle acceleration used to counteract gravity
-    local CT is (mu/tgt_r^2 - tgt_vx^2/tgt_r) / (s_acc / (1-(oldT/tau))). //Gravity and centrifugal force term at cutoff
-    
-    local frT is oldA + oldB*oldT + CT. //sin pitch at burnout
-    local fr is oldA + C. //sin pitch at current time
-    local frdot is (frT-fr)/oldT. //approximate rate of sin pitch
-    
+    Print "dh: " + dh.
+	
+    Local C is (body:mu/s_r^2 - (s_vx^2/s_r))/s_acc. //portion of vehicle acceleration used to counteract gravity
+	Print "C: " + C.
+    local fr is A_dash + C. //sin pitch at current time	
+    local CT is ((body:mu/tgt_r^2) - (tgt_vx^2/tgt_r)) / (s_acc / (1-(T_dash/tau))). //Gravity and centrifugal force term at cutoff
+	Print (body:mu/tgt_r^2).
+	Print (tgt_vx^2/tgt_r).
+    Print ((body:mu/tgt_r^2) - (tgt_vx^2/tgt_r)).
+	Print (s_acc / (1-(T_dash/tau))).
+	Print "CT: " + CT.
+	Print "body:mu " + body:mu.
+	Print "tgt_r" + tgt_r.
+	Print "tgt_vx" + tgt_vx.
+	Print "T dash" + T_dash.
+	Print "tau " + tau.
+	
+    local frT is A_dash + B_dash*T_dash + CT. //sin pitch at burnout
+    local frdot is (frT-fr)/T_dash. //approximate rate of sin pitch
+	Print "A_dash: " + A_dash.
+	Print "B_dash: " + B_dash.
+	Print "frt: " + frT.
+	Print "fr: " + fr.
+    Print "frdot: " + frdot.
     local ft is 1 - (fr^2)/2. //cos pitch
     local ftdot is -fr*frdot. //cos pitch speed
     local ftdd is -(frdot^2)/2. //cos pitch acceleration
-    
+	Print "ft: " + ft.
+	Print "ftdot: " + ftdot.
+    Print "ftdd: " + ftdd.
     local mean_r is (tgt_r + s_r)/2.
-    local dv is (dh/mean_r) + (s_ve*Tm*(ftdot+ftdd*tau)) + ((ftdd*s_ve*Tm^2)/2).
-    set dv to dv / (ft + ftdot*tau + ftdd*(tau^2)). // big equation from wiki near end of estimated
-    set T to tau*(1 - constant:e ^ (-dv/s_ve)). // estimated updated burnout time
-    debug("DV: "+dv).
-    
-    if(T >= peg_eps) {
-        local ab is hf_peg_solve(oldT, tau).
+	Print "mean_r: " + mean_r.
+    local dv is (dh/mean_r) + ((s_ve*T) * (ftdot+(ftdd*tau))) + ((ftdd*s_ve*(T^2))/2). //note this is from nasa manual equation 36
+	//local dv is (dh/mean_r) + (s_ve*T) + (ftdot+(ftdd*tau)) + ((ftdd*s_ve*(T^2))/2).// note this is from wiki
+	Print T.
+	Print (dh/mean_r).
+	Print (s_ve*T_dash).
+	Print (ftdot+(ftdd*tau)).
+	Print ((ftdd*s_ve*(T^2))/2).
+	Print "fDV: " + dv.
+	Print (ft + ftdot*tau + ftdd*(tau^2)).
+    set dv to abs(dv / (ft + (ftdot*tau) + (ftdd*(tau^2)))). // big equation from wiki near end of estimated
+	Print "DV: " + dv.
+    local T_plus is tau*(1 - constant:e ^ (-dv/s_ve)). // estimated updated burnout time
+    Print "T_plus" + T_plus.
+	if abs(t_plus-tau)/tau < 0.001{ //if the result is too close to a full burnout try again until the craft is in a better position to converge
+		Set t_plus to T_dash*0.95. 
+		Print "new T-Plus" + T_plus.
+	}
+    if(T_plus >= 2) { // this effectively when the solution starts to become very sensitive and A and B should not longer be re-calculated
+        local ab is hf_peg_solve(T_plus, tau, tgt_vy, tgt_r, s_vy, s_r).
         set A to ab[0].
         set B to ab[1].
     } else {
         Print("terminal guidance enabled").
-        set A to oldA.
-        set B to oldB.
+        set A to A_dash.
+        set B to B_dash.
     }
-    return list(A, B, C, T).
+	wait 0.01.
+    return list(A, B, C, T_plus, CT, dv).
 }
 
 ///////////////////////////////////////////////////////////////////////////////////
@@ -441,6 +504,10 @@ function hf_peg_cycle {
 declare function hf_peg_solve {
     parameter T.//Estimated time until burnout
     parameter tau. // tau = ve/a which is the time to burn the vehicle completely if it were all propellant
+	parameter tgt_vy.
+	parameter tgt_r.
+	parameter s_vy.
+	parameter s_r.
 	
 	local s_ve is Util_Engine["Vel_Exhaust"]().
 
@@ -448,15 +515,18 @@ declare function hf_peg_solve {
     local b1 is (b0*tau) - (s_ve*T). //Wiki eq 7b
     local c0 is b0*T - b1. //Wiki eq 7c
     local c1 is (c0*tau) - (s_ve * T^2)/2. //Wiki eq 7d
-    
-    local z0 is tgt_vy - s_vy.  //Wiki Major loop algortthm MB Matrix top
-    local z1 is (tgt_r - s_r) - s_vy*T. //Wiki Major loop algortthm MB Matrix bottom
-    
+    local mb0 is tgt_vy - s_vy.  //Wiki Major loop algortthm MB Matrix top
+    local mb1 is (tgt_r - s_r) - s_vy*T. //Wiki Major loop algortthm MB Matrix bottom
     local d is (b0*c1 - b1*c0). // //Wiki Major loop algortthm intermediate stage to solve for Mx from Ma and Mb
     
-    local B is (z1/c0 - z0/b0) / (c1/c0 - b1/b0). 
-    local A is (z0 - b1*B) / b0.
-    
+    local B is (mb1/c0 - mb0/b0) / (c1/c0 - b1/b0). 
+	local A is (mb0 - b1*B) / b0.
+	Print "Peg Solve".
+    Print "s_ve " + s_ve.
+	Print "T " + T.
+	Print "tau " + tau.
+	Print "A " + A.
+	Print "B " + B.
     return list(A, B).
 }
 ///////////////////////////////////////////////////////////////////////////////////
