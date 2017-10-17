@@ -1,6 +1,8 @@
 
 { // Start of anon
 
+//// http://www.movable-type.co.uk/scripts/latlong.html is a good source for bearing information on goecords on sphere
+
 ///// Download Dependant libraies
 local Util_Engine is import("Util_Engine").
 local Util_Vessel is import("Util_Vessel").
@@ -16,8 +18,7 @@ local Util_Vessel is import("Util_Vessel").
 ////////////////////////////////////////////////////////////////
 //File Functions
 ////////////////////////////////////////////////////////////////
-
-
+//Credits: own
 
 function ff_Suicide_info{
 	Parameter AvgGravity, distance is gl_baseALTRADAR.
@@ -33,7 +34,8 @@ function ff_Suicide_info{
 	
 	Return (arr).
 }	
-
+////////////////////////////////////////////////////////////////
+//Credits: own
 
 Function ff_SuBurn {	
 Parameter ThrottelStartUp is 0.1, SafeAlt is 50, EndVelocity is 1. // end velocity must be positive
@@ -186,105 +188,104 @@ Parameter Hover_alt is 50, BaseLoc is gl_shipLatLng.
 
 ////////////////////////////////////////////////////////////////
 
-Function ff_goodLand{ 
-	Parameter ThrottelStartTime is 0.1, SafeAlt is 50, TargetLatLng is "Null", MaxSlopeAng is 1.
+Function ff_goodLand{ // this is to be reviewed and parts put in vac_landing
+	// Parameter ThrottelStartTime is 0.1, SafeAlt is 50, TargetLatLng is "Null", MaxSlopeAng is 1.
 	
-	//this landing tries to burn purely horizontal and uses a pid to determine the desired downwards velocity and then a second PID to determine the pitch required to maintain the desire downward velocity
+	// //this landing tries to burn purely horizontal and uses a pid to determine the desired downwards velocity and then a second PID to determine the pitch required to maintain the desire downward velocity
 	
 	
-	//Body Rotation
+	// //Body Rotation
 	
-	Set Bod_rot to Ship:Body:RotationPeriod.
-	Set Bod_Ang_Ajust to (ETA:PERIAPSIS /Bod_rot)*360. //angle of roation the body will incur before the ship get to the PE
-	//Set Bod_rot_Dir to Ship:Body:Angularvel 
-	//TODO: work out how to tell if the orbit is in the same direction as the body rotation.
+	// Set Bod_rot to Ship:Body:RotationPeriod.
+	// Set Bod_Ang_Ajust to (ETA:PERIAPSIS /Bod_rot)*360. //angle of roation the body will incur before the ship get to the PE
+	// //Set Bod_rot_Dir to Ship:Body:Angularvel // lonk into SHIP:ORBIT:BODY:ROTATIONPERIOD and the time from LAN to PE in an eliptical orbit. We know the time from LAN to PE will be constant so we will have a fixed rotation of the body to PE (during the transit of the argument of perioapsis) and there for know where PE will be for a given LAN. Therefore we will need to adjust the orbit so we have that we pass over a given LAN and therefore a given PE at the target.
+	// //TODO: work out how to tell if the orbit is in the same direction as the body rotation.
 	
-	Set PePos to positionat(Ship, ETA:PERIAPSIS + TIME:SECONDS). //Returns the ship-raw position at the PE
-	Set PePos to ship:Body:GEOPOSITIONOF(PePos). //Converts the predicted PE into geo-cordinates
-	Set PePos:Lat to PePos:Lat - Bod_Ang_Ajust. //TODO: Ensure this does not need a Clamp angle function for multiple roations or large values that make things negative
+	// Set PePos to positionat(Ship, ETA:PERIAPSIS + TIME:SECONDS). //Returns the ship-raw position at the PE
+	// Set PePos to ship:Body:GEOPOSITIONOF(PePos). //Converts the predicted PE into geo-cordinates
+	// Set PePos:Lat to PePos:Lat - Bod_Ang_Ajust. //TODO: Ensure this does not need a Clamp angle function for multiple roations or large values that make things negative
 
-	//Set ShipPeUpVec to PePos - body:position.
-	Set PEVec to velocityat(Ship, ETA:PERIAPSIS + TIME:SECONDS):Surface.
-	//horz
-	Set PeHorzVel to PEVec:mag. // its known at PE the verVel is Zero so all velocity must be horizontal
-	//Vertical
-	Set PeVerVel to 0. // its known at PE the verVel is Zero
-	Set PeVerBurnDist to Orbit:Periapsis - (PePos:TERRAINHEIGHT + SafeAlt). 
-	Set PeAvgGravity to sqrt(		(	(body:mu / (Orbit:Periapsis + body:radius)^2) +((body:mu / (PePos:TERRAINHEIGHT + body:radius)^2 )^2)		)/2		).// Root Mean square method
-	Set PeFallTime to Orbit_Calc["quadraticPlus"](-PeAvgGravity/2, -PeVerVel, PeVerBurnDist).//r = r0 + vt - 1/2at^2 ===> Quadratic equiation 1/2*at^2 + bt + c = 0 a= acceleration, b=velocity, c= distance
-	Set PeFallVel to abs(PeVerVel) + (PeAvgGravity*PeFallTime).//v = u + at
+	// //Set ShipPeUpVec to PePos - body:position.
+	// Set PEVec to velocityat(Ship, ETA:PERIAPSIS + TIME:SECONDS):Surface.
+	// //horz
+	// Set PeHorzVel to PEVec:mag. // its known at PE the verVel is Zero so all velocity must be horizontal
+	// //Vertical
+	// Set PeVerVel to 0. // its known at PE the verVel is Zero
+	// Set PeVerBurnDist to Orbit:Periapsis - (PePos:TERRAINHEIGHT + SafeAlt). 
+	// Set PeAvgGravity to sqrt(		(	(body:mu / (Orbit:Periapsis + body:radius)^2) +((body:mu / (PePos:TERRAINHEIGHT + body:radius)^2 )^2)		)/2		).// Root Mean square method
+	// Set PeFallTime to Orbit_Calc["quadraticPlus"](-PeAvgGravity/2, -PeVerVel, PeVerBurnDist).//r = r0 + vt - 1/2at^2 ===> Quadratic equiation 1/2*at^2 + bt + c = 0 a= acceleration, b=velocity, c= distance
+	// Set PeFallVel to abs(PeVerVel) + (PeAvgGravity*PeFallTime).//v = u + at
 	
-	//times
-	Set HorzBurnTime to Util_Engine["burn_time"](PeHorzVel). // Burn Time if pure horizontal burn
-	Set HozBurnTimeGravCancel to (HorzBurnTime /(sqrt(PeAvgGravity^2 + gl_TWR^2))/ HorzBurnTime ). //Approximate Burn Time required if performing CAB to PE
-	Set VerBurnTime to Util_Engine["burn_time"](PeFallVel). //Burn time required if performing Suicide burn at PE
+	// //times
+	// Set HorzBurnTime to Util_Engine["burn_time"](PeHorzVel). // Burn Time if pure horizontal burn
+	// Set HozBurnTimeGravCancel to (HorzBurnTime /(sqrt(PeAvgGravity^2 + gl_TWR^2))/ HorzBurnTime ). //Approximate Burn Time required if performing CAB to PE
+	// Set VerBurnTime to Util_Engine["burn_time"](PeFallVel). //Burn time required if performing Suicide burn at PE
 
-	//Suicide burn Calcs
+	// //Suicide burn Calcs
 	
-	Set SuBurnDistToStop to Altitude - gl_PeLatLng:TERRAINHEIGHT - SafeAlt. // Calculates the distance between the craft and the intended stopping height
-	Set SuBurnTimeFallToStop to Orbit_Calc["quadraticPlus"](-PeAvgGravity/2, -VERTICALSPEED, SuBurnDistToStop).// the time to fall from the current position to the the intended stopping height r = r0 + vt - 1/2at^2 ===> Quadratic equiation 1/2*at^2 + bt + c = 0 a= acceleration, b=velocity, c= distance
-	Set SuBurnVel to abs(VERTICALSPEED) + (PeAvgGravity*SuBurnTimeFallToStop).// the dv required to perform the suicide burn. v = u + at
-	Set SuBurnVelTime to Util_Engine["burn_time"](SuBurnVel)*PeAvgGravity.
-	Set SuBurnAcc to (ship:AVAILABLETHRUST/ship:mass). // note is is assumed this will be undertaken in a vaccum so the thrust and ISP will not change. Otherwise if undertaken in the atmosphere drag will require a variable thrust engine so small variations in ISP and thrust won't matter becasue the thrust can be adjusted to suit.
-	Set SuBurnDist to 1000000000000000. // Intial Value to get into the loop
-	Set SuBurnDistOld to 1. // Intial Value to get into the loop
-	Set loopI to 0.
-	Set SuBurnDist to ((SuBurnVel)^2)/ (2*(SuBurnAcc)). // height traversed while undertaking the suicide burn. v^2 = u^2 + 2as ==> s = ((v^2) - (u^2))/2a
+	// Set SuBurnDistToStop to Altitude - gl_PeLatLng:TERRAINHEIGHT - SafeAlt. // Calculates the distance between the craft and the intended stopping height
+	// Set SuBurnTimeFallToStop to Orbit_Calc["quadraticPlus"](-PeAvgGravity/2, -VERTICALSPEED, SuBurnDistToStop).// the time to fall from the current position to the the intended stopping height r = r0 + vt - 1/2at^2 ===> Quadratic equiation 1/2*at^2 + bt + c = 0 a= acceleration, b=velocity, c= distance
+	// Set SuBurnVel to abs(VERTICALSPEED) + (PeAvgGravity*SuBurnTimeFallToStop).// the dv required to perform the suicide burn. v = u + at
+	// Set SuBurnVelTime to Util_Engine["burn_time"](SuBurnVel)*PeAvgGravity.
+	// Set SuBurnAcc to (ship:AVAILABLETHRUST/ship:mass). // note is is assumed this will be undertaken in a vaccum so the thrust and ISP will not change. Otherwise if undertaken in the atmosphere drag will require a variable thrust engine so small variations in ISP and thrust won't matter becasue the thrust can be adjusted to suit.
+	// Set SuBurnDist to 1000000000000000. // Intial Value to get into the loop
+	// Set SuBurnDistOld to 1. // Intial Value to get into the loop
+	// Set loopI to 0.
+	// Set SuBurnDist to ((SuBurnVel)^2)/ (2*(SuBurnAcc)). // height traversed while undertaking the suicide burn. v^2 = u^2 + 2as ==> s = ((v^2) - (u^2))/2a
 	
-	//below is a test loop to see if gravity losses need to be taken into account when determining the correct suicide burn altitude
+	// //below is a test loop to see if gravity losses need to be taken into account when determining the correct suicide burn altitude
 	
-	Until (abs(SuBurnDist - SuBurnDistOld) > 0.5) or (loopI > 10){ /// loop to find the velocity required to cancel out gravity losses during the suicide burn.
-		Set SuBurnDistOld to SuBurnDist.
-		Set SuBurnGravLoss to SuBurnVelTime*PeAvgGravity. //Gravity loss estimate on dv required.
-		Set SuBurnVelTime to Util_Engine["burn_time"](SuBurnVel+SuBurnGravLoss). //new burn time required including dv adjusted with gravity loss.
-		Set SuBurnDist to ((SuBurnVel)^2)/ (2*(SuBurnAcc)). // height traversed while undertaking the suicide burn. v^2 = u^2 + 2as ==> s = ((v^2) - (u^2))/2a
-		Set LoopI to LoopI + 1.
-	}
+	// Until (abs(SuBurnDist - SuBurnDistOld) > 0.5) or (loopI > 10){ /// loop to find the velocity required to cancel out gravity losses during the suicide burn.
+		// Set SuBurnDistOld to SuBurnDist.
+		// Set SuBurnGravLoss to SuBurnVelTime*PeAvgGravity. //Gravity loss estimate on dv required.
+		// Set SuBurnVelTime to Util_Engine["burn_time"](SuBurnVel+SuBurnGravLoss). //new burn time required including dv adjusted with gravity loss.
+		// Set SuBurnDist to ((SuBurnVel)^2)/ (2*(SuBurnAcc)). // height traversed while undertaking the suicide burn. v^2 = u^2 + 2as ==> s = ((v^2) - (u^2))/2a
+		// Set LoopI to LoopI + 1.
+	// }
 	
-	Set BurnHeightDiff to SuBurnDistToStop - SuBurnDist. // the currect distance until the suicde burn needs to start.
+	// Set BurnHeightDiff to SuBurnDistToStop - SuBurnDist. // the currect distance until the suicde burn needs to start.
 	
-	//Create PID to adjust the craft pitch (without thrusting downward) which maintains a BurnHeightDiff of zero and regulates the velocity of burn height change if not zero reventing a pitch above the horizontal.
+	// //Create PID to adjust the craft pitch (without thrusting downward) which maintains a BurnHeightDiff of zero and regulates the velocity of burn height change if not zero reventing a pitch above the horizontal.
 	
 
-	if PeFallTime > VerBurnTime + HorzBurnTime +10 { //ensure the amount of time remaing after performing a pure horizontal burn enable the craft to still perform a suicide burn is sufficent plus a margin for error and craft rotation (10s).
-		Set StartTime to HozBurnTimeGravCancel. //This conditions means we can burn horizontally only and don't need to worry about altitude loss during the burn
-	}  
-	Else {
-		If PeFallTime - {
-			
-		}
-		Else {
-			Set StartTime to HorzBurnTime + HozBurnTimeGravCancel
-		}
-	}
+	// if PeFallTime > VerBurnTime + HorzBurnTime +10 { //ensure the amount of time remaing after performing a pure horizontal burn enable the craft to still perform a suicide burn is sufficent plus a margin for error and craft rotation (10s).
+		// Set StartTime to HozBurnTimeGravCancel. //This conditions means we can burn horizontally only and don't need to worry about altitude loss during the burn
+	// }  
+	// Else {
+		// If PeFallTime =1{
+			// ////TODO: this is where i left off
+		// }
+		// Else {
+			// Set StartTime to HorzBurnTime + HozBurnTimeGravCancel
+		// }
 	
 		
-	Until ETA:PERIAPSIS < HorzBurnTime {
-	lock steering to - vcrs(SHIP:UP:VECTOR,SHIP:FACING:STARVECTOR) //point retrograde to the horizon
-		Clearscreen.
-		Print PeHorzVel.
-		Print PeVerBurnDist.
-		Print PeFallTime.
-		Print HorzBurnTime.
-		Print VerBurnTime.
-		Print totalBurnTime.
-		Print ETA:PERIAPSIS.
-		wait 0.01.
-	}
-	Print "Starting CAB".
-	Set Start_burn_time to time:seconds.
-	Set HorzBurnTimeEta to HorzBurnTime + Start_burn_time.
-	Set TotBurnTimeEta to HorzBurnTime + Start_burn_time.
-	Print Start_burn_time.
-	Print HorzBurnTimeEta.
-	Print TotBurnTimeEta.
-	Print time:seconds.
-	Until time:seconds > HorzBurnTimeEta{
-		Lock Throttle to 1.0.
-		wait 0.01.
-	}
-	Lock Throttle to 0.0.
-	lock steering to ship:up:vector. // point upwards
+	// Until ETA:PERIAPSIS < HorzBurnTime {
+	// lock steering to - vcrs(SHIP:UP:VECTOR,SHIP:FACING:STARVECTOR) //point retrograde to the horizon
+		// Clearscreen.
+		// Print PeHorzVel.
+		// Print PeVerBurnDist.
+		// Print PeFallTime.
+		// Print HorzBurnTime.
+		// Print VerBurnTime.
+		// Print totalBurnTime.
+		// Print ETA:PERIAPSIS.
+		// wait 0.01.
+	// }
+	// Print "Starting CAB".
+	// Set Start_burn_time to time:seconds.
+	// Set HorzBurnTimeEta to HorzBurnTime + Start_burn_time.
+	// Set TotBurnTimeEta to HorzBurnTime + Start_burn_time.
+	// Print Start_burn_time.
+	// Print HorzBurnTimeEta.
+	// Print TotBurnTimeEta.
+	// Print time:seconds.
+	// Until time:seconds > HorzBurnTimeEta{
+		// Lock Throttle to 1.0.
+		// wait 0.01.
+	// }
+	// Lock Throttle to 0.0.
+	// lock steering to ship:up:vector. // point upwards
 } //End of Function
 
 ////////////////////////////////////////////////////////////////
@@ -293,6 +294,9 @@ Function ff_goodLand{
 ////////////////////////////////////////////////////////////////
 //Helper Functions
 ////////////////////////////////////////////////////////////////
+
+// Credits: www.moveable-type.co.uk
+
 function hf_gs_distance {
 parameter gs_p1, gs_p2. //(point1,point2). 
 	//Need to ensure converted to radians TODO Test if this still works in degrees
@@ -314,6 +318,10 @@ parameter gs_p1, gs_p2. //(point1,point2).
 return result.
 }
 
+////////////////////////////////////////////////////////////////
+
+// Credits: www.moveable-type.co.uk
+
 function hf_gs_bearing {
 parameter gs_p1, gs_p2. //(point1,point2). 
 	//Need to ensure converted to radians TODO Test if this still works in degrees
@@ -332,6 +340,9 @@ parameter gs_p1, gs_p2. //(point1,point2).
 	// set result to  arctan2(resultA, resultB).// this is the intial bearing formula go to www.moveable-type.co.uk for more information
 return result.
 }
+////////////////////////////////////////////////////////////////
+
+// Credits: Own
 
 Function hf_PIDControlLoop{
 Parameter lastdt, lastLat, lastLng.

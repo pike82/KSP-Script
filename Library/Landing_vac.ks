@@ -1,6 +1,10 @@
 
 { // Start of anon
 
+//Most components of this file are self researched with some with ideas sourced from https://github.com/KK4TEE/kOSPrecisionLand
+// and http://www.danielrings.com/2014/08/07/kspkos-grasshopper-a-model-of-spacexs-grasshopper-program-in-the-kerbal-space-program-using-the-kos-mod/
+
+
 ///// Download Dependant libraies
 local Util_Engine is import("Util_Engine").
 local Util_Landing is import("Util_Landing").
@@ -14,15 +18,19 @@ local flight is import("flight").
 	local landing_vac is lex(
 		"SuBurn",ff_SuBurn@,
 		"CABLand", ff_CABLand@,
-		"HoverLand",ff_HoverLand@
+		"CAB", ff_CAB@,
+		"BestLand", ff_BestLand@,
+		"HoverLand",ff_HoverLand@,
+		"LandingPEAdjust",ff_LandingPEAdjust@
 	).
 
 ////////////////////////////////////////////////////////////////
 //File Functions
 ////////////////////////////////////////////////////////////////
+//Credits: Own
 
 Function ff_SuBurn {	
-Parameter ThrottelStartUp is 0.1, SafeAlt is 50, EndVelocity is 1. // end velocity must be positive
+Parameter ThrottelStartUp is 0.1, SafeAlt is 50, EndVelocity is 0.5. // end velocity must be positive
 	Set Flight_Arr to flight["Fall"].
 
 	Until Flight_Arr["fallDist"] < ( gl_baseALTRADAR + SafeAlt + (ThrottelStartUp * ship:verticalspeed)){ 
@@ -47,11 +55,13 @@ Parameter ThrottelStartUp is 0.1, SafeAlt is 50, EndVelocity is 1. // end veloci
 
 	if (gl_baseALTRADAR < 0.25) or (Ship:Status = "LANDED"){
 		Lock Throttle to 0.
-	} // Note: if the ship does not meet these conditions the throttle will still be locked a 1, you will need to ensure a landing has taken place or add in another section in the runtime to ensure the throttle does not stay at 1.
+	} // Note: if the ship does not meet these conditions the throttle will still be locked at 1, you will need to ensure a landing has taken place or add in another section in the runtime to ensure the throttle does not stay at 1.
 } //End of Function
 
 //////////////////////////////////////////////////////////////////
-
+//Credits: Own with ideas sourced from http://www.danielrings.com/2014/08/07/kspkos-grasshopper-a-model-of-spacexs-grasshopper-program-in-the-kerbal-space-program-using-the-kos-mod/
+// TODO: The full code needs to be brought accrost from the hover test script for this to be functional
+// The hover land function maintains a hovers position and moves the ship to the coordinates wanted at the vertial speed requested
 Function ff_hoverLand {	
 Parameter Hover_alt is 50, BaseLoc is gl_shipLatLng. 
 	Set sv_PIDALT:SETPOINT to Hover_alt.
@@ -80,8 +90,182 @@ Parameter Hover_alt is 50, BaseLoc is gl_shipLatLng.
 } //End of Function
 
 ////////////////////////////////////////////////////////////////
+// The CAB land function maintains a pure constant altitude during the burn and therefore may not be appropriate for highly elliptical orbits 
+//as it will maintain a constant altitude when the burn starts which may be well above the periapsis. 
+//It is intended once the CAB is complete that a seperate function is used to rotate the vessel to conduct a suicide land or hover land.
+
+//Credits: OWN
 
 Function ff_CABLand{ 
+	Parameter ThrottelStartTime is 0.1, SafeAlt is 50, TargetLatLng is "Null", MaxSlopeAng is 1. // throttle start time is the time it take the trottle to get up to full power
+	
+	//this landing tries to burn purely horizontal and uses a pid to determine the desired downwards velocity and then a second PID to determine the pitch required to maintain the desire downward velocity
+
+	Set PEVec to velocityat(Ship, ETA:PERIAPSIS + TIME:SECONDS):Surface.
+	Print "Vel at PE "+PEVec:mag.
+	//horizontal
+	Set PeHorzVel to PEVec:mag. // its known at PE the verVel is Zero so all velocity must be horizontal	
+	Print "HVel at PE " + PeHorzVel.
+	
+	//Vertical
+	Set PeVerVel to 0. // its known at PE the verVel is Zero
+	Print "Calc VVel at PE " + PeVerVel.
+	
+	//PE Suicide Burn Calcls
+	
+	Set PeVerBurnDist to Orbit:Periapsis - (TargetLatLng:TERRAINHEIGHT + SafeAlt). 
+	Set Gravarr to Util_Vessel["Gravity"](PeVerBurnDist).
+	Set SuInfoarr to Util_Landing["Suicide_info"](Gravarr["AVG"],PeVerBurnDist).
+	Set PeFallTime to SuInfoarr["Time"].
+	Set PeFallVel to SuInfoarr["Vel"].
+	Set PeFallDist to SuInfoarr["Dist"].
+	
+	Print "PeVerBurnDist " + PeVerBurnDist.
+	Print "PeFallDist " + PeFallDist.
+	
+	//times
+	Set HorzBurnTime to Util_Engine["burn_time"](PeHorzVel). // Burn Time if pure horizontal burn
+	set descentprofile to lexicon(). //create new lexicon to store the descent profile
+	
+	Set Horzvel to PeHorzVel. // create a temp vel for the simulation
+	Set Dist to 0.
+	Set profiletime to 0.
+	Set tgtPERad to Orbit:Periapsis+body:radius.
+	until Horzvel <= 0 {//run the iteration until the velocity is 0
+	
+		descentprofile:add ("dist",dist). //add the current distanceto the profile
+		descentprofile:add ("vel",Horzvel). //add the current velocity to the profile
+		descentprofile:add ("time",profiletime). //add the current velocity to the profile
+		
+		Set acc to ((ship:availablethrust* 1000)/((ship:mass * 1000) - Util_Engine["mdot"]())). //rthe acceleration of the ship in one second
+		Set HozBurnTimeGravCancel to ((body:mu/(tgtPERad^2)) - ((PeHorzVel^2)/tgtPERad))/acc. //portion of vehicle acceleration used to counteract gravity as per PEG ascent guidance formula in one second
+		
+		Set Horzvel to Horzvel - (acc - HozBurnTimeGravCancel). // current horz velocity minus the acceleration in the horitontal direction.
+		Set dist to dist + Horzvel.
+		Set profiletime to profiletime + 1.
+	}
+	
+	Print "Burn Time :" + descentprofile["Time"].
+	Set BurnStartTime to (ETA:PERIAPSIS + TIME:SECONDS) - descentprofile["Time"].
+	
+
+	Until time:seconds > BurnStartTime{
+		Print "Wating for burn Start in :" + BurnStartTime - Time:seconds.
+		Lock steering to ship:retrograde. 
+	}
+	Print "Starting CAB".
+	
+	Until ship:velocity:surface < 1.0{
+		Lock Throttle to 1.0.
+		//Create PID to adjust the craft pitch (without thrusting downward) which maintains a BurnHeightDiff of zero and regulates the velocity of burn height change if not zero reventing a pitch above the horizontal.		
+		
+		wait 0.01.
+	}
+	Lock Throttle to 0.0.
+	lock steering to ship:up:vector. // point upwards
+} //End of Function
+
+////////////////////////////////////////////////////////////////
+
+Function ff_CAB{ 
+	
+	//this landing tries to burn purely horizontal and uses a pid to determine the desired downwards velocity and then a second PID to determine the pitch required to maintain the desire downward velocity
+
+	Set PEVec to velocityat(Ship, ETA:PERIAPSIS + TIME:SECONDS):Surface.
+	Print "Vel at PE "+PEVec:mag.
+	//horizontal
+	Set PeHorzVel to PEVec:mag. // its known at PE the verVel is Zero so all velocity must be horizontal	
+	Print "HVel at PE " + PeHorzVel.
+	
+	//Vertical
+	Set PeVerVel to 0. // its known at PE the verVel is Zero
+	Print "Calc VVel at PE " + PeVerVel.
+	
+	//times
+	Set HorzBurnTime to Util_Engine["burn_time"](PeHorzVel). // Burn Time if pure horizontal burn
+	set descentprofile to lexicon(). //create new lexicon to store the descent profile
+	
+	Set Horzvel to PeHorzVel. // create a temp vel for the simulation
+	Set Dist to 0.
+	Set profiletime to 0.
+	Set tgtPERad to Orbit:Periapsis+body:radius.
+	Set StartMass to (ship:mass * 1000).
+	until Horzvel <= 0 {//run the iteration until the velocity is 0
+		Set StartMass to StartMass - Util_Engine["mdot"]().
+		Set acc to (ship:availablethrust* 1000)/(StartMass). //the acceleration of the ship in one second
+		
+		Set HozBurnTimeGravCancel to ((body:mu/(tgtPERad^2)) - ((PeHorzVel^2)/tgtPERad))/acc. //portion of vehicle acceleration used to counteract gravity as per PEG ascent guidance formula in one second
+		
+		Set Horzvel to Horzvel - abs(acc - HozBurnTimeGravCancel). // current horz velocity minus the acceleration in the horitontal direction.
+		Set dist to dist + Horzvel.
+		Set profiletime to profiletime + 1.
+		Clearscreen.
+		Print acc.
+		Print HozBurnTimeGravCancel.
+		Print Horzvel.
+		Print dist.
+		Print profiletime.
+		wait 0.01.
+	}
+	//Look into making this a running lexicon of values
+	descentprofile:add ("dist",dist). //add the current distanceto the profile
+	descentprofile:add ("vel",Horzvel). //add the current velocity to the profile
+	descentprofile:add ("time",profiletime). //add the current velocity to the profile
+	
+	Print "Burn Time :" + descentprofile["Time"].
+	Print "Burn Velocity:" + descentprofile["vel"].
+	Print "Burn Dist:" + descentprofile["dist"].
+	Set BurnStartTime to (ETA:PERIAPSIS + TIME:SECONDS) - descentprofile["Time"].
+	If ETA:PERIAPSIS < descentprofile["Time"] +10 {
+		Set BurnStartTime to BurnStartTime + Ship:orbit:period. // ensures it will start the burn on the next orbit if too early with a 10 second buffer to allow for alignment and processing finish
+	}
+	
+
+	Until time:seconds > BurnStartTime{
+		clearscreen.
+		Print "Burn Time :" + descentprofile["Time"].
+		Print "Burn Velocity:" + descentprofile["vel"].
+		Print "Burn Dist:" + descentprofile["dist"].
+		Print "Wating for burn Start in :" + (BurnStartTime - Time:seconds).
+		Lock steering to ship:retrograde. 
+		wait 0.01.
+	}
+	Print "Starting CAB".
+	
+	Set PIDVV to PIDLOOP(0.03, 0, 0.05, -0.1, 0.1).//SET PID TO PIDLOOP(KP, KI, KD, MINOUTPUT, MAXOUTPUT).	
+	Set PIDVV:SETPOINT to 0. // we want the altitude to remain constant so no vertical velocity.
+	Set highpitch to 0.
+	Set FixHeading to Ship:bearing.
+	if (Fixheading + 180) < 360 {
+		set FixHeading to FixHeading + 180.
+	}
+	Else{
+		set FixHeading to FixHeading - 180.
+	}
+	LOCK STEERING TO HEADING(FixHeading, highPitch). //move to pitchover angle
+	Set Basetime to time:seconds.
+	
+	
+	Until (Basetime + profiletime) - time:seconds < 0 OR SHIP:GROUNDSPEED < 1{
+		Lock Throttle to 1.0.
+		//Create PID to adjust the craft pitch (without thrusting downward) which maintains a vertical velocity of zero and regulates the velocity of burn height change if not zero reventing a pitch above the horizontal.		
+		Set dpitch TO PIDVV:UPDATE(TIME:SECONDS, verticalspeed). //Get the PID on the AlT diff as desired vertical velocity
+		Set highpitch to max(highpitch + dpitch,0). // Ensure the pitch does not go below zero as gravity will efficently lower the veritcal velocity if required
+		Clearscreen.
+		Print "Ground Speed: " + SHIP:GROUNDSPEED.
+		Print "Pitch: " + highpitch.
+		Print (Basetime + profiletime) - time:seconds.
+		wait 0.01.
+	}
+	Lock Throttle to 0.0.
+	lock steering to ship:up:vector. // point upwards
+} //End of Function
+
+////////////////////////////////////////////////////////////////
+
+//Credits: OWN
+
+Function ff_BestLand{ 
 	Parameter ThrottelStartTime is 0.1, SafeAlt is 50, TargetLatLng is "Null", MaxSlopeAng is 1.
 	
 	//this landing tries to burn purely horizontal and uses a pid to determine the desired downwards velocity and then a second PID to determine the pitch required to maintain the desire downward velocity
@@ -159,7 +343,7 @@ Function ff_CABLand{
 	
 	If HeightafterHorzBurn > PeFallDist{
 	// then we know that we can burn purely horizontal then conduct as a vertical suicide burn afterwards.
-		lock steering to - vcrs(SHIP:UP:VECTOR,SHIP:FACING:STARVECTOR) //point retrograde to the horizon
+		lock steering to - vcrs(SHIP:UP:VECTOR,SHIP:FACING:STARVECTOR). //point retrograde to the horizon
 		//We also want to chack how accurate our Vertical drop during burn estimate was.
 		Set BurnStartHeight to Altitude.
 		until ETA:PERIAPSIS < HorzBurnTime { //a waiting routine until the correct burn start time arrives. Wait until has not been used as this way aloows measurments and print screens in the mean time if desired.
@@ -236,7 +420,30 @@ Function ff_CABLand{
 } //End of Function
 
 ////////////////////////////////////////////////////////////////
+// this function determines if the current orbit PE passes close to the target landing area or if a correction burn needs to be made
+Function ff_LandingPEAdjust{ 
+	Parameter ThrottelStartTime is 0.1, SafeAlt is 50, TargetLatLng is "Null", MaxSlopeAng is 1. // throttle start time is the time it take the trottle to get up to full power
 
+	
+	
+	//Determine Body Rotation during transit to landing
+	Set Bod_rot to Ship:Body:RotationPeriod.
+	Print "Bod_rot " + Bod_rot.
+	Set Bod_Ang_Ajust to (ETA:PERIAPSIS /Bod_rot)*360. //angle of roation the body will incur before the ship get to the PE
+	Print "Bod_Ang_Ajust " + Bod_Ang_Ajust.
+	Set Bod_rot_Dir to Ship:Body:Angularvel.
+	Print "Bod_rot_Dir " + Bod_rot_Dir.
+
+	
+	//TODO: work out how to tell if the orbit is in the same direction as the body rotation.
+	Set PePos to positionat(Ship, ETA:PERIAPSIS + TIME:SECONDS). //Returns the ship-raw position at the PE
+	Set PePos to ship:Body:GEOPOSITIONOF(PePos). //Converts the predicted PE into geo-cordinates
+	Print "Int PePos " + PePos:Lat.
+	Set PePos:Lat to PePos:Lat - Bod_Ang_Ajust. //TODO: Ensure this does not need a Clamp angle function for multiple roations or large values that make things negative
+	Print "Adj PePos " + PePos:Lat.
+	
+
+} //End of Function
 
 ////////////////////////////////////////////////////////////////
 //Helper Functions

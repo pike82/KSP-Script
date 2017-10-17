@@ -27,7 +27,7 @@ local Util_Orbit is import("Util_Orbit").
 //look-into hoffman transfers where can use position at(orbit,time) to determine where a body will be and then make a manuver to meet it at the same time intead of purely node iterations through hill climb.
 
 Function ff_BodyTransfer {	
-Parameter target_Body, Target_Perapsis, maxDV is 1000, IncTar is 90, int_Warp is False.
+Parameter target_Body, Target_Perapsis, maxDV is 1000, IncTar is 90, int_Warp is False. // note the target name does not need to be sourrounded by quotations
 	if runMode:haskey("ff_Node_exec") {
 		OrbMnvNode["Node_exec"](int_Warp).		
 	} //end runModehaskey if
@@ -40,7 +40,7 @@ Parameter target_Body, Target_Perapsis, maxDV is 1000, IncTar is 90, int_Warp is
 ///////////////////////////////////////////////////////////////////////////////////
 	
 Function ff_CraftTransfer {	
-	Parameter target_ves, Target_dist, Max_orbits, int_Warp is False.
+	Parameter target_ves, Target_dist, Max_orbits, int_Warp is False. // note the target name does not need to be sourrounded by quotations
 	if runMode:haskey("ff_Node_exec") {
 		OrbMnvNode["Node_exec"](int_Warp).		
 	} //end runModehaskey if

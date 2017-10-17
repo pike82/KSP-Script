@@ -51,86 +51,20 @@ Print runMode["runMode"].
 
 Function Mission_runModes{
 		
+
 	if runMode["runMode"] = 0.1 { 
 		Print "Run mode is:" + runMode["runMode"].
-		Launch["preLaunch"]().
-		gf_set_runmode("runMode",1.0).
-	}
-	
-	else if runMode["runMode"] = 1.0 { 
-		Print "Run mode is:" + runMode["runMode"].
-		Launch["liftoff"]().
-		gf_set_runmode("runMode",1.1).
-	}
-	
-	else if runMode["runMode"] = 1.1 { 
-		Print "Run mode is:" + runMode["runMode"].
-		Launch["liftoffclimb"]().
-		gf_set_runmode("runMode",1.2).
-	}
-	
-	else if runMode["runMode"] = 1.2 { 
-		Print "Run mode is:" + runMode["runMode"].
-		Launch["GravityTurnAoA"](0.05).
-		gf_set_runmode("runMode",1.3).
-	}
-	
-	// else if runMode["runMode"] = 1.2 { 
-		// Print "Run mode is:" + runMode["runMode"].
-		// Launch["GravityTurnPres"]().
-		// gf_set_runmode("runMode",1.3).
-	// }
-	
-	else if runMode["runMode"] = 1.3 { 
-		Print "Run mode is:" + runMode["runMode"].
-		Launch["Coast"]().
-		gf_set_runmode("runMode",2.1).
-	}
-	
-	// else if runMode["runMode"] = 1.3 { 
-		// Print "Run mode is:" + runMode["runMode"].
-		// Launch["InsertionPIDSpeed"](sv_targetAltitude).
-		// gf_set_runmode("runMode",2.1).
-	// }
-	
-	// else if runMode["runMode"] = 1.3 { 
-		// Print "Run mode is:" + runMode["runMode"].
-		// Launch["InsertionPEG"](sv_targetAltitude, sv_targetAltitude, sv_targetInclination).
-		// gf_set_runmode("runMode",2.1).
-	// }
-	
-	else if runMode["runMode"] = 2.1 { 
-		Print "Run mode is:" + runMode["runMode"].
-		orbmnvs["circ"]("apo", 0.001, false, sv_targetInclination).
-		gf_set_runmode("runMode",3.1).
-	}
-	
-	else if runMode["runMode"] = 3.1 { 
-		Print "Run mode is:" + runMode["runMode"].
-		orbrv["BodyTransfer"](Mun, 10000, 1000).
-		gf_set_runmode("runMode",3.2).
-	}
-	
-	else if runMode["runMode"] = 3.2 { 
-		Print "Run mode is:" + runMode["runMode"].
-		wait until ship:body:name = "Mun". 
-		Print "Waiting for SOI Stabilisation".
-		wait 60.// ensure SOI transfer complete
-		orbmnvs["adjapo"](10000, 500, false, sv_targetInclination).
-		gf_set_runmode("runMode",4.1).
-	}
-	
-	else if runMode["runMode"] = 4.1 { 
-		Print "Run mode is:" + runMode["runMode"].
-		orbmnvs["circ"]("per", 0.01, false, 90).
-		gf_set_runmode("runMode",5.1).
-	}
-
-	else if runMode["runMode"] = 5.1 { 
-		Print "Run mode is:" + runMode["runMode"].
+		Stage.
+		Wait 60. //allow hyperedit
 		Landing_vac["CAB"]().
 		gf_set_runmode("runMode",6.1).
 	}	
+
+	// else if runMode["runMode"] = 5.1 { 
+		// Print "Run mode is:" + runMode["runMode"].
+		// Landing_vac["CAB"]().
+		// gf_set_runmode("runMode",6.1).
+	// }	
 	
 } /// end of function runmodes
 

@@ -2,15 +2,13 @@
 { // Start of anon
 
 ///// Download Dependant libraies
-
+local Util_Engine is import("Util_Engine").
 ///////////////////////////////////////////////////////////////////////////////////
 ///// List of functions that can be called externally
 ///////////////////////////////////////////////////////////////////////////////////
 
     local OrbMnvNode is lex(
 		"Node_exec", ff_Node_exec@,
-		"burn_time", ff_burn_time@,
-		"Mdot", ff_mdot@,
 		"User_Node_exec", ff_user_Node_exec@
     ).
 
@@ -22,7 +20,7 @@
 function ff_Node_exec { // this function executes the node when ship has one
 // used to determine if the node exceution started and needs to return to this point.
 
-parameter autowarp is 0, Alrm is True, n is nextnode, v is n:burnvector, starttime is time:seconds + n:eta - ff_burn_time(v:mag/2). 
+parameter autowarp is 0, Alrm is True, n is nextnode, v is n:burnvector, starttime is time:seconds + n:eta - Util_Engine["burn_time"](v:mag/2). 
 	print "executing node".		  
 	If runMode:haskey("ff_Node_exec") = false{
 		If ADDONS:Available("KAC") AND Alrm {		  // if KAC installed	  
@@ -52,8 +50,8 @@ parameter autowarp is 0, Alrm is True, n is nextnode, v is n:burnvector, startti
 		  wait 0.1.
 		}
 	  }
-	  //set t to min(Staging["burn_time"](n:burnvector:mag), 1).
-	  Lock Throttle to min(ff_burn_time(n:burnvector:mag), 1).
+	  //set t to min(Util_Engine["burn_time"](n:burnvector:mag), 1).
+	  Lock Throttle to min(Util_Engine["burn_time"](n:burnvector:mag), 1).
 	  wait 0.1.
 	}
 	Lock Throttle to 0.0.

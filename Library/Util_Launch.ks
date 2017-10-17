@@ -15,8 +15,12 @@
 //File Functions
 ////////////////////////////////////////////////////////////////
 
-//TODO:	Add in a launch window calculator. look at the KOS-Stuff_master launch window file for inspiration.
+//TODO:	Add in a launch window calculator. look at the KOS-Stuff_master launch window file for inspiration, also a bit of code has been added below but has not been checked/reworked.
+//// http://www.movable-type.co.uk/scripts/latlong.html is a good source for bearing information on goecords on sphere
 
+
+////////////////////////////////////////////////////////////////
+// Credit : http://www.orbiterwiki.org/wiki/Launch_Azimuth
 //Calculates the Azimuth required at Launch to meet a specific inclination on a body
 Function ff_LaunchAzimuth {
 
@@ -31,15 +35,56 @@ PARAMETER targetInclination, targetAltitude.
 	SET rotvelx TO targetOrbitSpeed*sin(initAzimuth) - (bodyRotSpeed*cos(launchLoc:LAT)). //Sets the x vector required adjusted for launch site location away from the equator
 	SET rotvely TO targetOrbitSpeed*cos(initAzimuth). //Sets the y Vector required
 	SET azimuth TO (arctan(rotvelx / rotvely)). //Sets the adjusted inclinationation angle based on the rotation of the planet
-	//SET azimuth TO -(arctan(rotvelx / rotvely))+180. //Sets the adjusted inclinationation angle based on the rotation of the planet
+	//SET azimuth TO -(arctan(rotvelx / rotvely))+180. //Sets the adjusted inclinationation angle based on the rotation of the planet // TODO: full check on what azimuths are acceptable to input
 	IF targetInclination < 0 {
 		SET azimuth TO 180-azimuth.
 	} //Normalises to a launch in the direction of body rotation
 	PRINT ("Lanuch Azimuth:" + azimuth).    
 	RETURN azimuth.   
 } // End of Function
+
+//Credits: // https://github.com/KK4TEE/kOSPrecisionLand
+// This function calculates the direction a ship must travel to achieve the
+// target inclination given the current ship's latitude and orbital velocity.
+// Written by BriarAndRye <https://www.reddit.com/r/Kos/comments/3a5hjq>
+// Modified to use the target insertion velocity to compute the inclination
+// instead of the ideal circular orbit velocity - this allows insertion into
+// elliptical orbits.
+
+/////////////////////////////////////////////////////////////////////////////////////
+
+function ff_FlightAzimuth {
+	parameter inc. // target inclination
+    parameter V_orb. // target orbital speed
+  
+	// project desired orbit onto surface heading
+	local az_orb is arcsin ( cos(inc) / cos(ship:latitude)).
+	if (inc < 0) {
+		set az_orb to 180 - az_orb.
+	}
+	
+	// create desired orbit velocity vector
+	local V_star is heading(az_orb, 0)*v(0, 0, V_orb).
+
+	// find horizontal component of current orbital velocity vector
+	local V_ship_h is ship:velocity:orbit - vdot(ship:velocity:orbit, up:vector)*up:vector.
+	
+	// calculate difference between desired orbital vector and current (this is the direction we go)
+	local V_corr is V_star - V_ship_h.
+	
+	// project the velocity correction vector onto north and east directions
+	local vel_n is vdot(V_corr, ship:north:vector).
+	local vel_e is vdot(V_corr, heading(90,0):vector).
+	
+	// calculate compass heading
+	local az_corr is arctan2(vel_e, vel_n).
+	return az_corr.
+
+}// End of Function
 	
 /////////////////////////////////////////////////////////////////////////////////////
+
+// Source: https://github.com/TheBassist95/Kos-Stuff
 
 function ff_launchwindow{
 Parameter target.
@@ -98,46 +143,12 @@ Parameter ascendLongDiff is 0.2.
 	return.
 }
 
-
-// This function calculates the direction a ship must travel to achieve the
-// target inclination given the current ship's latitude and orbital velocity.
-// Written by BriarAndRye <https://www.reddit.com/r/Kos/comments/3a5hjq>
-// Modified to use the target insertion velocity to compute the inclination
-// instead of the ideal circular orbit velocity - this allows insertion into
-// elliptical orbits.
-
-function ff_FlightAzimuth {
-	parameter inc. // target inclination
-    parameter V_orb. // target orbital speed
-  
-	// project desired orbit onto surface heading
-	local az_orb is arcsin ( cos(inc) / cos(ship:latitude)).
-	if (inc < 0) {
-		set az_orb to 180 - az_orb.
-	}
-	
-	// create desired orbit velocity vector
-	local V_star is heading(az_orb, 0)*v(0, 0, V_orb).
-
-	// find horizontal component of current orbital velocity vector
-	local V_ship_h is ship:velocity:orbit - vdot(ship:velocity:orbit, up:vector)*up:vector.
-	
-	// calculate difference between desired orbital vector and current (this is the direction we go)
-	local V_corr is V_star - V_ship_h.
-	
-	// project the velocity correction vector onto north and east directions
-	local vel_n is vdot(V_corr, ship:north:vector).
-	local vel_e is vdot(V_corr, heading(90,0):vector).
-	
-	// calculate compass heading
-	local az_corr is arctan2(vel_e, vel_n).
-	return az_corr.
-
-}// End of Function
-
 ////////////////////////////////////////////////////////////////
 //Helper Functions
 ////////////////////////////////////////////////////////////////
+
+// Source: https://github.com/TheBassist95/Kos-Stuff
+
 
 function hf_tricalc{
 	local a is latitude.
@@ -156,6 +167,9 @@ function hf_tricalc{
 	return c.
 }
 
+////////////////////////////////////////////////////////////////
+
+// Source: https://github.com/TheBassist95/Kos-Stuff
 function hf_normalvector{
 	parameter ves.
 	set vel to velocityat(ves,time:seconds):orbit.

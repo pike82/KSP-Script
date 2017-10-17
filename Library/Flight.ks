@@ -1,6 +1,9 @@
 
 { // Start of anon
 
+//General Credits with ideas from the following:
+// https://github.com/KK4TEE/kOSPrecisionLand
+
 ///// Download Dependant libraies
 //local Node_Calc is import("Node_Calc").
 
@@ -91,7 +94,7 @@
 	
 	Function ff_Velocities{
 	// //Flight Velocities
-		set vel_HorSurVel to SHIP:GROUNSPEED. //Pure horizontal speed over ground
+		set vel_HorSurVel to SHIP:GROUNDSPEED. //Pure horizontal speed over ground
 		set vel_VerSurVel to SHIP:VERTICALSPEED. //Vertical velocity of the ground 
 		set vel_HorSurFwdVel to vxcl(vcrs(SHIP:UP:VECTOR,SHIP:FACING:FOREVECTOR), vel_HorSurVel). //Horizontal velocity of the ground Fwd Component only
 		set vel_HorSurRightVel to vxcl(vcrs(SHIP:UP:VECTOR,SHIP:FACING:STARVECTOR), vel_HorSurVel). //Horizontal velocity of the ground Right Component only (effectively the slide slip component as fwd should be the main component)

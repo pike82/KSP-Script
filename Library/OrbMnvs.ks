@@ -29,6 +29,7 @@ local Util_Orbit is import("Util_Orbit").
 //TODO look at the hill climb stuff once a PEG ascent program is completed.	
 	Function ff_Circ {
 	//TODO: Change to work with negative inclinations.
+	Print "Creating Circularisation checking in space".
 	Parameter APSIS is "per", EccTarget is 0.005, int_Warp is false, IncTar is 1000.
 		if runMode:haskey("ff_Node_exec") {
 			OrbMnvNode["Node_exec"](int_Warp).		

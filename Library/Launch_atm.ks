@@ -1,6 +1,12 @@
 
 { // Start of anon
 
+//General Credits with ideas from the following:
+// Kevin Gisi: http://youtube.com/gisikw
+// KOS Community library
+// https://github.com/KK4TEE/kOSPrecisionLand
+
+
 ///// Download Dependant libraies
 local Util_Engine is import("Util_Engine").
 local Flight is import("Flight").
@@ -26,7 +32,7 @@ local launch_atm is lex(
 ////////////////////////////////////////////////////////////////
 //File Functions
 ////////////////////////////////////////////////////////////////	
-	
+// Credit: Own recreate from general	
 Function ff_preLaunch {
 	//TODO: Make gimble limits work.
 	Wait 1. //Alow Veriables to be set and Stabilise pre launch
@@ -49,7 +55,7 @@ Function ff_preLaunch {
 } /// End Function	
 		
 /////////////////////////////////////////////////////////////////////////////////////	
-		
+// Credit: Own recreate from general		
 Function ff_liftoff{
 	Print gl_TVALMax.
 	
@@ -93,7 +99,7 @@ Function ff_liftoff{
 }/// End Function
 
 /////////////////////////////////////////////////////////////////////////////////////	
-
+// Credit: Own recreate from general
 Function ff_liftoffclimb{
 	//Print(SHIP:Q).
 	local LchAlt is ALT:RADAR.
@@ -111,7 +117,7 @@ Function ff_liftoffclimb{
 /////////////////////////////////////////////////////////////////////////////////////		
 
 ///This gravity turn tries to hold the AoA to a predefined value
-	
+// Credit: Own recreate from general
 Function ff_GravityTurnAoA{	
 	PARAMETER AoATarget is 0.0, Flametime is 1.0, Kp is 0.15, Ki is 0.35, Kd is 0.7, PID_Min is -0.1, PID_Max is 0.1. 
 	// General rule of thumb, set first stage dV to around 1700 - 1900 for Kerbin. Set the target AoA to (-(TWR^2))+1 ie. 1.51 = -1.25	
@@ -126,7 +132,7 @@ Function ff_GravityTurnAoA{
 	Set StartLogtime to TIME:SECONDS.
 	//Log "# Time, # grav pitch, # AoA, # dPitch, # PTerm , # ITerm , # DTerm" to AOA.csv.
 	
-	UNTIL (SHIP:Q < MaxQ*0.05) {  //this will need to change so it is not hard set.
+	UNTIL (SHIP:Q < MaxQ*0.05) {  //TODO: this will need to change so it is not hard set.
 		Set Angles to Flight["Angles"]().
 		Set angofAttack to Angles["aoa"].
 
@@ -166,7 +172,7 @@ Function ff_GravityTurnAoA{
 /////////////////////////////////////////////////////////////////////////////////////	
 
 //This gravity turn is a work in progress however it it intended to follow a predefined path based on the ratio of atmospheric pressure  
-	
+// Credit: Own recreate from general	
 Function ff_GravityTurnPres{
 	PARAMETER PresMultiple is 1.0.	
 	
@@ -192,16 +198,20 @@ Function ff_GravityTurnPres{
 } // End of Function
 
 /////////////////////////////////////////////////////////////////////////////////////
-	
-Function ff_Coast{ // intended to keep a low AoA and coast to Ap allowing another function (hill climb in this case) to calculate the insertion burn
-
+// Credit: Own recreate from general	
+Function ff_Coast{ // intended to keep a low AoA and burn then coast to Ap allowing another function (hill climb in this case) to calculate the insertion burn
+	Print "Coasting Phase".
 	LOCK STEERING TO ship:facing:vector. //maintain current alignment
+	UNTIL SHIP:Apoapsis > sv_targetAltitude {
+		Util_Vessel["FAIRING"]().
+		Util_Vessel["COMMS"]().
+	}
 	LOCK Throttle to 0.
 
 }// End of Function
 
 /////////////////////////////////////////////////////////////////////////////////////
-
+// Credit: Own recreate from general
 Function ff_InsertionPIDSpeed{ // PID Code stepping time to Apo. Note this can only attempt to launch into a circular orbit
 PARAMETER 	ApTarget, Kp is 0.3, Ki is 0.0002, Kd is 12, PID_Min is -0.1, PID_Max is 0.1, 
 			vKp is -0.01, vKi is 0.0002, vKd is 12, vPID_Min is -10, vPID_Max is 1000.
@@ -256,7 +266,12 @@ PARAMETER 	ApTarget, Kp is 0.3, Ki is 0.0002, Kd is 12, PID_Min is -0.1, PID_Max
 	
 
 /////////////////////////////////////////////////////////////////////////////////////
-	
+// Credits: Own modifications to:
+// http://www.orbiterwiki.org/wiki/Powered_Explicit_Guidance
+//With Large assisstance and corrections from:
+// https://github.com/Noiredd/PEGAS
+// https://ntrs.nasa.gov/archive/nasa/casi.ntrs.nasa.gov/19660006073.pdf
+// https://amyparent.com/post/automating-rocket-launches/
 Function ff_InsertionPEG{ // PEG Code
 
 parameter tgt_pe. //target periapsis
@@ -405,7 +420,7 @@ parameter u is 0. // target true anomaly in degrees(0 = insertion at Pe)
 ///////////////////////////////////////////////////////////////////////////////////
 //Helper function for the files functions
 /////////////////////////////////////////////////////////////////////////////////////
-
+// Credits: Same as ff_InsertionPEG
 function hf_peg_cycle {
     parameter A.
     parameter B.
@@ -499,7 +514,7 @@ function hf_peg_cycle {
 }
 
 ///////////////////////////////////////////////////////////////////////////////////
-
+// Credits: Same as ff_InsertionPEG
 // Estimate, returns A and B coefficient for guidance
 declare function hf_peg_solve {
     parameter T.//Estimated time until burnout
