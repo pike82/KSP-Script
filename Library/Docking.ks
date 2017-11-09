@@ -1,8 +1,8 @@
-// Docking Library v1.0.0
-// Kevin Gisi
+{ // Start of anon
+
+//General Credits, script and ideas came from the following:
 // http://youtube.com/gisikw
 
-{ // Start of anon
 
 ///////////////////////////////////////////////////////////////////////////////////
 ///// List of functions that can be called externally
@@ -16,9 +16,12 @@
 ////////////////////////////////////////////////////////////////
 //File Functions
 ////////////////////////////////////////////////////////////////
-// TODO: work out an undocking function
+
+Credits: http://youtube.com/gisikw
+
 //TODO: work out why the exclusion function is not working correctly
-//TODO: test from multiple orientations to ensure it works from multiple angles and approach speeds.
+//TODO: Test Main engine components of the function.
+//TODO: Further tests from multiple orientations to ensure it works from multiple angles.
   
 	FUNCTION ff_dok_dock {
 	PARAMETER dockingPortTag, targetPortTag, targetName, Safe_dist is 75.
@@ -61,24 +64,27 @@
 		RCS OFF.
 	}// End Function
 	
+///////////////////////////////////////////////////////////////////////////////////	
+Credits: Own
 	
 	FUNCTION ff_undock {
-	PARAMETER dockingPortTag, targetPortTag, targetName, Safe_dist is 500.
+	PARAMETER dockingPortTag, targetPortTag, targetName, Safe_dist is 150.
 		SET dockingPort TO hf_dok_get_port(dockingPortTag, Ship).
 	    dockingPort:CONTROLFROM().
 		wait 1.0.
 		dockingPort:undock.
 		RCS ON.
 		Print "Ensuring Range".
-	    hf_undock_move(targetVessel, dockingPort, Safe_dist*0.1, 0.25). //first check is to ensure not within safe distance, if we are move out at 1 m/s to ensure we have appropriate clearance before speeding up
-		hf_undock_move(targetVessel, dockingPort, Safe_dist*0.2, 1). //first check is to ensure not within safe distance, if we are move out at 2 m/s to ensure we have appropriate clearance before before speeding up
-		hf_undock_move(targetVessel, dockingPort, Safe_dist, 2). //first check is to ensure not within safe distance, if we are move out at 5 m/s to ensure we have appropriate clearance before before speeding up
+	    hf_undock_move(targetVessel, dockingPort, Safe_dist*0.1, 0.25). //first check is to ensure not within safe distance, if we are move out at 0.25 m/s to ensure we have appropriate clearance before speeding up
+		hf_undock_move(targetVessel, dockingPort, Safe_dist*0.2, 1). //first check is to ensure not within safe distance, if we are move out at 1 m/s to ensure we have appropriate clearance before before speeding up
+		hf_undock_move(targetVessel, dockingPort, Safe_dist, 2). //first check is to ensure not within safe distance, if we are move out at 2 m/s to ensure we have appropriate clearance before before speeding up
 		RCS OFF.
 	}// End Function
 
 ///////////////////////////////////////////////////////////////////////////////////
 //Helper Functions
 /////////////////////////////////////////////////////////////////////////////////////
+Credits: http://youtube.com/gisikw
 
 	FUNCTION hf_dok_get_port {
 	Print "Getting port".
@@ -96,6 +102,7 @@
 	
 ///////////////////////////////////////////////////////////////////////////////////
 	
+//Credits: Own
 
 	FUNCTION hf_undock_move {
 	PARAMETER targetVessel, dockingPort, distance, speed.
@@ -111,7 +118,8 @@
 		} // End if
 	}// End Function
 	
-	
+///////////////////////////////////////////////////////////////////////////////////	
+Credits: http://youtube.com/gisikw	
 	
 	FUNCTION hf_dok_ensure_range {
 	PARAMETER targetVessel, dockingPort, distance, speed.
@@ -130,6 +138,7 @@
 	}// End Function
 	
 ///////////////////////////////////////////////////////////////////////////////////
+Credits: http://youtube.com/gisikw
 	
 	FUNCTION hf_dok_translate { // move the ship in the direction of the vector inputed as a parameter
 	PARAMETER vector.
@@ -145,7 +154,7 @@
 	}// End Function
 	
 ///////////////////////////////////////////////////////////////////////////////////
-	
+Credits: http://youtube.com/gisikw	
 	FUNCTION hf_dok_kill_relative_velocity {
 	PARAMETER targetPort, speed.
 
@@ -157,7 +166,8 @@
 	}// End Function
 	
 ///////////////////////////////////////////////////////////////////////////////////
-	
+Credits: Own with ideas from http://youtube.com/gisikw
+
 	FUNCTION hf_dok_sideswipe {
 	PARAMETER targetPort, dockingPort, Safe_distance, distance, speed, Step_Time.
 	 
@@ -311,6 +321,7 @@
 	} // End of dok_sideswipe function
 	
 ///////////////////////////////////////////////////////////////////////////////////
+Credits: Own
 	
 	FUNCTION hf_dok_Exclusion_test {
 	PARAMETER distance, Centre_node_vec, test_Vector.
@@ -329,6 +340,7 @@
 	}// End Function
 	
 ///////////////////////////////////////////////////////////////////////////////////
+Credits: Own
 	
 	FUNCTION hf_dok_Exclusion_Ang {
 	PARAMETER distance, Centre_node_vec, test_Vector.
@@ -339,7 +351,7 @@
 	}// End Function
 	
 ///////////////////////////////////////////////////////////////////////////////////
-	
+Credits: http://youtube.com/gisikw	
 	FUNCTION hf_dok_approach_port {
 	PARAMETER targetPort, dockingPort, distance, speed.
 

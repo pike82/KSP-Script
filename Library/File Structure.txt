@@ -2,41 +2,136 @@ Boot File
 	- This provides Uplink and connection control. 
 	- This handles the movement between runmodes and Persistant keys within the runmodes file.
 
-knu
-	- handles all function calls between libaries and the mission file
+knu	- handles all function calls between libaries and the mission file.
 
 	
 LIBRARIES	
 
-Hill Climb
-	- The Code used when a hill climbing iteration process is required to calculate a solution.
+General prefix rules:
+gl_ - "Global lock" A global lock variable specified in the mission file which is to be used accorss all functions.
+sv_ - "Ship Variable" A global ship specific variable specified in the mission file which is to be used accorss all functions.
+ff_ - "file function" A function which intended to be called upon and give a result to an external function outside the file.
+hf_ - "helper function" A function which intended to be called upon and give a result internally to the file.
+
+
+Docking - Deals with close in docking manuevers and docking seperation only.
+			
+			- 	"dok_dock" this function is used when the target craft is within docking distance. The function zero's the relative velocity using main engines then a safe apporach based on a set safe distance using RCS. The function handles all aspects of the docking upto engagement. The speeds used at specific distance intervals are hard coded.
+
+			- 	"undock" this function will undock using RCS adjusting the releative undocking speed based on the safe distance and distance away from the undocked vessel. Once the safe distance has been reached the function will end. The Speeds at each distance interval are hard coded.
+
+			
+Flight	- Deals With areodynamics of craft in Atmospheric flight.
+			
+			-	"vectors" this is used to determine the craft refrence frame vectors and returns and array of the vectors. In general this should be used to get the appropriate vector code and manually entered to reduce CPU load, unless all the vectors are required for the calculation.
+			
+			- 	"Velocities" this is used to get an array of the relative directional velocities. The code within this can also be used as a reference to get individual velocity components.
+			
+			- 	"Angles" this is used to get an array of the relative flight angles.
+			
+
+Hill Climb	- The Code used when a hill climbing iteration process is required to calculate a solution.
 	
-Docking
-	- Deals with close in docking manuevers and docking seperation only. 
+			-	"freeze" this is used to freeze a parameter so it is constant anot used as a posiible variable
+			
+			-	"seek" this is the function that seeks out the top og the hill given the variables and evaluation of fitness.
+			
+			-	"seek_low" same as seek but starts at 10 m/s incriments instead of 100m/s incrimental searching.
+			
+			-	"seek_verylow" same as seek_low but with finer incrimental searching.
+			
+			-	"optimize" the actual fitness function used in the seek functions. This is has been included in the event of needing to use this function directly, however most of the time the seek functions will be used to determine the solution.
+ 
+Landing_Atm (Work in Progress) - Handles landing on a body with an atmosphere.
 
-OrbRv
-	- Deals with setting up and executing a RV between to craft within the same SOI.
+			-	"DO_Burn" (Work in Progress) this function is used to undertake a de-orbit burn to a specified periapsis height.
+			
+			-	"SD_Burn" (Work in Progress) this function is used to make a slow down burn that uses any remaining fuel to reduce the velocity just priory to atmosphere reentry.
+			
+			-	"Reentry" (Work in Progress) used to hold the ship retrorograde or a specified lifting angle during reentry.
+			
+			-	"ParaLand" (Work in Progress) Parachute deplyment function at a predefined altitude.
+ 
+ 
+Landing_Vac (Current Work in Progress) - Handles landing on an airless body.
 
-OrbMnvs
-	- Deals with standard orbital manuovers such as Transfers, APO and PER changes.
+Launch_Vac	(To Be Developed) - Handles launches from an airless body. 
+
+Launch_Atm	- Handles Launches in an Atmosphere.
+
+			-	"preLaunch" allows the craft to stabilise and enige parameters to be set.
+			
+			-	"liftoff" Starts up the engines and ensures they are working at full thrust before releasing the clamps.
+			
+			-	"liftoffclimb" Ensures the craft climbs past the towers and to a sufficent airspeed (based on Q) before rotating the vessel and conducting the pitchover.
+			
+			-	"GravityTurnAoA" conducts a gravity turn based on maintaining a fixed AOA using a PID
+			
+			-	"GravityTurnPres" (Work in Progress) conducts a gravity turn based on the air pressure
+			
+			-	"Coast" Keeps the craft at a "fixed pitch coasting burn" (so not really coasting) until the desired orbital apoapsis has been reached then shut down the engine. This would be used with a orbital file circularisation for small planets such as kerbin where the PEG would not work without reducing the TWR significantly.
+			
+			-	"InsertionPIDSpeed" (Work in Progress) intended to use a pid to allow a constant insertion burn into a circular orbit
+			
+			-	"InsertionPEG" (Work in Progress) intended to use a closed loop guidance such as in real craft to allow a constant insertion burn into a circular or elliptical orbit.
+
+			
+OrbMnvNode	- Handles and executes all Maneuver nodes.
+	
+			-	"Node_exec" This function executes the next Maneuver node or whatever nodes is passed to it along with an associated Kerbal Alarm Clock entry. This function makes a record in the runMode persistant file so that if the craft is unlaoded the script can return to this point and continue with the execution of the node.
+			
+			-	"User_Node_exec" this functions allows a user via the interface terminal to create there own node(s) to be executed by the program.
+
+			
+OrbMnvs		- Deals with standard orbital manuovers such as Transfers and orbital changes.	
+
+			-	"Circ" this circularises the orbit at either Apoapsis or periapsis depending on what is apssed or the circumstance (i.e. if escape trajectory is determine is automatically selects periapsis). This can performa a circularisation and inclination change at the same time using hill climb if required.
+			
+			-	"adjper" adjusts the periapsis when at apoapsis
+			
+			-	"adjapo" adjusts the apoapsis when at periapsis
+			
+			-	"adjeccorbit" (Work in Progress) adjusts the orbit parameters based ona burn at a predefined time
+			
+			-	"AdjOrbInc" conducts an inclination change at the apoapsis which maintains the existing SMA.
+			
+			-	"AdjPlaneInc" conducts a plane change to another obits plane (i.e. changes inclination to that of a target craft).
+
+	
+OrbRv	- Deals with setting up and executing a RV between to craft within the same SOI.
+
+			-	"BodyTransfer" (Work in Progress) Allows a transfer between planet bodies SOI for a set distance and dV range (WIP, Currently uses Hill Climb but looking into Hohmann Transfer calcs instead)
 		
-Flight
-	- Deals With areodynamics of craft in Atmospheric flight.
+			-	"CraftTransfer" this conducts a transfer to another vessel based on the max orbits and distance desired (i.e. this is the first part of the RV to another vessel before running the docking script once you are in the vessel physics loading distance).
 
-OrbMnvNode
-	- Handles and executes all manuvour nodes.
+			
+Util_Engine	- Calculates details about the current staged Engines
+		
+			-	"FLAMEOUT" used to determine if a flameout has occured and will seperate based on one of multiple seperations possible 
+			
+			-	"stage_delta_v" returns the dV in the current stage
+			
+			-	"burn_time" returns the burn time for a given dV
+			
+			-	"mdot" returns the combined mdot of the staged engines
+			
+			-	"Vel_Exhaust" returns the combined mdot of the staged engines
 
-Launch_Atm
-	- Handles Launches in an Atmosphere.
 
-Launch_Vac
-	-Handles launches ina vacuumn.
+Util_Landing (Work in Progress and credits as required)	- Calculates details about Landing
+				!!!Still need to determine if this is needed or it can all just be included in the atm and vac landing files more effectively this file does contain some good geo-cordinate translation scripts which may be usful for atmospheric flight.
 
-Landing_Atm
-	_Handles landing on an airless body.
 
-Landing_Atm
-	- Handles landing on a body with an atmosphere.
+Util_Launch	- Calculates Launch Details.
+	
+			-	"LaunchAzimuth"
+			
+			-	"launchwindow"
+			
+			-	"FlightAzimuth"
+
+
+
 
 Launch Calc
 	- Calculates the launch window and direction required for all craft.
@@ -47,15 +142,10 @@ Launch Atm
 Util_Orbit
 	- Calculates details about the current orbit or proposed orbit.
 
-Util_Engine
-	- Calculated Details about the Current stages Engines
-
 Util_Vessel
 	- Calculate Details about the current vessel and the onboard systems.
 
-Util_Landing
-	- Calculates details about Landing
 
-Util_Launch
-	- Calculate Launch Details.
+
+
 	

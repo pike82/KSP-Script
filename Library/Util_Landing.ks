@@ -1,6 +1,9 @@
 
 { // Start of anon
 
+//Whole file is a work in progress
+
+
 //// http://www.movable-type.co.uk/scripts/latlong.html is a good source for bearing information on goecords on sphere
 
 ///// Download Dependant libraies
@@ -37,34 +40,34 @@ function ff_Suicide_info{
 ////////////////////////////////////////////////////////////////
 //Credits: own
 
-Function ff_SuBurn {	
-Parameter ThrottelStartUp is 0.1, SafeAlt is 50, EndVelocity is 1. // end velocity must be positive
-	Set Flight_Arr to flight["Fall"].
+// Function ff_SuBurn {	
+// Parameter ThrottelStartUp is 0.1, SafeAlt is 50, EndVelocity is 1. // end velocity must be positive
+	// Set Flight_Arr to flight["Fall"].
 
-	Until Flight_Arr["fallDist"] < ( gl_baseALTRADAR + SafeAlt + (ThrottelStartUp * ship:verticalspeed)){ 
-		//Run screen update loop to inform of suicide burn wait.
-		Set Flight_Arr to flight["Fall"].
-		Clearscreen.
-		Print "maxStopAcc:" + maxStopAcc.
-		Print "gl_fallTime:" + Flight_Arr["fallTime"].
-		Print "gl_fallVel:" + Flight_Arr["fallVel"].
-		Print "gl_fallDist:" + Flight_Arr["fallDist"].
-		Print "gl_fallBurnTime:" + Util_Engine["burn_time"](Flight_Arr["fallVel"]).
-		Wait 0.001.
-	}
+	// Until Flight_Arr["fallDist"] < ( gl_baseALTRADAR + SafeAlt + (ThrottelStartUp * ship:verticalspeed)){ 
+		// //Run screen update loop to inform of suicide burn wait.
+		// Set Flight_Arr to flight["Fall"].
+		// Clearscreen.
+		// Print "maxStopAcc:" + maxStopAcc.
+		// Print "gl_fallTime:" + Flight_Arr["fallTime"].
+		// Print "gl_fallVel:" + Flight_Arr["fallVel"].
+		// Print "gl_fallDist:" + Flight_Arr["fallDist"].
+		// Print "gl_fallBurnTime:" + Util_Engine["burn_time"](Flight_Arr["fallVel"]).
+		// Wait 0.001.
+	// }
 
-	until (Ship:Status = "LANDED") or verticalspeed < EndVelocity  {
-		Lock Throttle to 1.0.
-		if (gl_baseALTRADAR < 0.25) or (Ship:Status = "LANDED"){
-			Lock Throttle to 0.
-			Break.
-		}
-	} // end Until
+	// until (Ship:Status = "LANDED") or verticalspeed < EndVelocity  {
+		// Lock Throttle to 1.0.
+		// if (gl_baseALTRADAR < 0.25) or (Ship:Status = "LANDED"){
+			// Lock Throttle to 0.
+			// Break.
+		// }
+	// } // end Until
 
-	if (gl_baseALTRADAR < 0.25) or (Ship:Status = "LANDED"){
-		Lock Throttle to 0.
-	} // Note: if the ship does not meet these conditions the throttle will still be locked a 1, you will need to ensure a landing has taken place or add in another section in the runtime to ensure the throttle does not stay at 1.
-} //End of Function
+	// if (gl_baseALTRADAR < 0.25) or (Ship:Status = "LANDED"){
+		// Lock Throttle to 0.
+	// } // Note: if the ship does not meet these conditions the throttle will still be locked a 1, you will need to ensure a landing has taken place or add in another section in the runtime to ensure the throttle does not stay at 1.
+// } //End of Function
 
 
 ////////////////////////////////////////////////////////////////
@@ -159,32 +162,32 @@ Parameter ThrottelStartUp is 0.1, SafeAlt is 50, EndVelocity is 1. // end veloci
 // ////////////////////////////////////////////////////////////////
 
 
-Function ff_hoverLand {	
-Parameter Hover_alt is 50, BaseLoc is gl_shipLatLng. 
-	Set sv_PIDALT:SETPOINT to Hover_alt.
-	Set sv_PIDLAT:Setpoint to BaseLoc:Lat.
-	Set sv_PIDLONG:Setpoint to BaseLoc:Lng.
+// Function ff_hoverLand {	
+// Parameter Hover_alt is 50, BaseLoc is gl_shipLatLng. 
+	// Set sv_PIDALT:SETPOINT to Hover_alt.
+	// Set sv_PIDLAT:Setpoint to BaseLoc:Lat.
+	// Set sv_PIDLONG:Setpoint to BaseLoc:Lng.
 	
-	Set distanceTol to 0.	
-	local dtStore is lexicon().
-	dtStore:add("lastdt", TIME:SECONDS).
-	dtStore:add("lastLat",0).
-	dtStore:add("lastLng",0).	
-	Until distanceTol > 3 { // until the ship is hovering above the set down loaction for 3 seconds (to allow for PID stability)
+	// Set distanceTol to 0.	
+	// local dtStore is lexicon().
+	// dtStore:add("lastdt", TIME:SECONDS).
+	// dtStore:add("lastLat",0).
+	// dtStore:add("lastLng",0).	
+	// Until distanceTol > 3 { // until the ship is hovering above the set down loaction for 3 seconds (to allow for PID stability)
 
-		Set dtStore to hf_PIDControlLoop(dtStore["lastdt"], dtStore["lastLat"], dtStore["lastLng"]).
-		if hf_gs_distance(BaseLoc, gl_shipLatLng) < 0.1{
-			Set distanceTol to distanceTol + 0.1.	
-		}
-		Else{
-			Set distanceTol to 0.
-		}
+		// Set dtStore to hf_PIDControlLoop(dtStore["lastdt"], dtStore["lastLat"], dtStore["lastLng"]).
+		// if hf_gs_distance(BaseLoc, gl_shipLatLng) < 0.1{
+			// Set distanceTol to distanceTol + 0.1.	
+		// }
+		// Else{
+			// Set distanceTol to 0.
+		// }
 
-		Wait 0.1.
-	}	
+		// Wait 0.1.
+	// }	
 
 	
-} //End of Function
+// } //End of Function
 
 ////////////////////////////////////////////////////////////////
 

@@ -1,6 +1,8 @@
 
 { // Start of anon
 
+//Credits: Own with utilisation of code and credits within the Hill Climb file.
+
 ///// Download Dependant libraies
 local Hill_Climb is import("Hill_Climb").
 local OrbMnvNode is import("OrbMnvNode").
@@ -23,6 +25,7 @@ local Util_Orbit is import("Util_Orbit").
 ////////////////////////////////////////////////////////////////
 //File Functions
 ////////////////////////////////////////////////////////////////
+//Credits: Own
 
 //TODO: Create a file function that seeks out both an optimum Apoapsis and Periapsis to define an eccentic orbit.
 //TODO: look at the KOS-Stuff_master manu file for possible ideas on reducing and bettering the AN code and manervering code.
@@ -48,7 +51,7 @@ local Util_Orbit is import("Util_Orbit").
 					Add n.
 				}
 				Else{
-			// use the following in the future to also conduct a change of inclination at the same time however if a PEG ascent is used this will become redundant
+			// use the following in the future to also conduct a change of inclination at the same time
 					Hill_Climb["Seek"](Hill_Climb["freeze"](time:seconds + ETA:PERIAPSIS), Hill_Climb["freeze"](0), 0, Cirdv, 
 						{ 	parameter mnv. 
 							return -mnv:orbit:eccentricity - (abs(IncTar-mnv:orbit:inclination)/2).
@@ -80,6 +83,7 @@ local Util_Orbit is import("Util_Orbit").
 	} /// End Function
 
 ///////////////////////////////////////////////////////////////////////////////////		
+//Credits: Own
 	
 	Function ff_adjper {
 	Parameter Target_Perapsis, Target_Tolerance is 500, int_Warp is false, IncTar is 1000.
@@ -109,6 +113,7 @@ local Util_Orbit is import("Util_Orbit").
 	}	/// End Function
 
 ///////////////////////////////////////////////////////////////////////////////////
+//Credits: Own
 	
 	Function ff_adjapo {
 	Parameter Target_Apoapsis, Target_Tolerance is 500, int_Warp is false, IncTar is 1000.
@@ -138,6 +143,9 @@ local Util_Orbit is import("Util_Orbit").
 	}	/// End Function
 
 ///////////////////////////////////////////////////////////////////////////////////
+
+//Credits: Own
+
 //TODO: Use Position at to make this more efficent and accurate by undertaking the burn when the ship will be at the new periapsis or apoapsis (depends on if more or less energy is required via SMA)
 //TODO: Use the master Stuff manu file as an example to determine the perpendicualr vector at the burn point so the dV and node can be created without the hill climb.
 // This will only get the correct orbit if teh ship is below the target apoapsis at the time of the burn, otherwise the apoapsis cannot be lowered enough.
@@ -161,6 +169,7 @@ local Util_Orbit is import("Util_Orbit").
 	}	/// End Function
 
 ///////////////////////////////////////////////////////////////////////////////////
+//Credits: Own
 	
 	Function ff_AdjOrbInc {
 	Parameter Target_Inc, target_Body is Ship:Orbit:body,int_Warp is false.
@@ -177,6 +186,7 @@ local Util_Orbit is import("Util_Orbit").
 	}	/// End Function
 
 ///////////////////////////////////////////////////////////////////////////////////
+//Credits: Own
 
 	Function ff_AdjPlaneInc {
 	Parameter Target_Inc, target_Body, Target_Tolerance is 0.05, int_Warp is false.

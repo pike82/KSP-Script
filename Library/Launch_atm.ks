@@ -32,7 +32,7 @@ local launch_atm is lex(
 ////////////////////////////////////////////////////////////////
 //File Functions
 ////////////////////////////////////////////////////////////////	
-// Credit: Own recreate from general	
+// Credit: Own recreated from ideas in mix of general	
 Function ff_preLaunch {
 	//TODO: Make gimble limits work.
 	Wait 1. //Alow Veriables to be set and Stabilise pre launch
@@ -55,7 +55,7 @@ Function ff_preLaunch {
 } /// End Function	
 		
 /////////////////////////////////////////////////////////////////////////////////////	
-// Credit: Own recreate from general		
+// Credit: Own recreated from ideas in mix of general		
 Function ff_liftoff{
 	Print gl_TVALMax.
 	
@@ -80,7 +80,7 @@ Function ff_liftoff{
 	until CurrEngineThrust = MaxEngineThrust or EngineStartTime +5 > TIME:SECONDS{ // until upto thrust or the engines have attempted to get upto thrust for more than 5 seconds.
 		FOR eng IN engList {  //Loops through Engines in the Vessel
 			IF eng:STAGE >= STAGE:NUMBER { //Check to see if the engine is in the current Stage
-				SET CurrEngineThrust TO CurrEngineThrust + eng:THRUST. //if it has a gimbal set the gimbal limit
+				SET CurrEngineThrust TO CurrEngineThrust + eng:THRUST. //add thrust to overall thrust
 			}
 		}
 		wait 0.01.
@@ -94,19 +94,20 @@ Function ff_liftoff{
 	if EngineStartTime + 0.75 > TIME:SECONDS {wait 0.75.} // this ensures time between staging engines and clamps so they do not end up being caught up in the same physics tick
 	STAGE. // Relase Clamps
 	PRINT "Lift off".
+	//TODO: change the lock steering to heading as the core part may not be rotated correctly. need to find a away to ensure current rotation is kept.
 	LOCK STEERING TO HEADING(0, 90). // stops all rotation until clear of the tower. This should have been set previously but is done again for redundancy
 	
 }/// End Function
 
 /////////////////////////////////////////////////////////////////////////////////////	
-// Credit: Own recreate from general
+// Credit: Own recreated from ideas in mix of general
 Function ff_liftoffclimb{
 	//Print(SHIP:Q).
 	local LchAlt is ALT:RADAR.
 	Wait UNTIL ALT:RADAR > sv_ClearanceHeight + LchAlt.
-	//Print(SHIP:Q).
 	LOCK STEERING TO HEADING(sv_intAzimith, 90).
-	Wait UNTIL SHIP:Q > 0.015. //Ensure past clearance height and airspeed 0.018 equates to approx 50m/s or 1.5kpa which is high enough to ensure aero stability for most craft small pitching
+	//Print(SHIP:Q).
+	Wait UNTIL SHIP:Q > 0.015. //Ensure past clearance height and airspeed 0.015 equates to approx 50m/s or 1.5kpa which is high enough to ensure aero stability for most craft small pitching	
 	PRINT "Starting Pitchover".
 	//Print (SHIP:Q).
 	LOCK STEERING TO HEADING(sv_intAzimith, sv_anglePitchover). //move to pitchover angle
@@ -117,7 +118,7 @@ Function ff_liftoffclimb{
 /////////////////////////////////////////////////////////////////////////////////////		
 
 ///This gravity turn tries to hold the AoA to a predefined value
-// Credit: Own recreate from general
+// Credit: Own recreated from ideas in mix of general
 Function ff_GravityTurnAoA{	
 	PARAMETER AoATarget is 0.0, Flametime is 1.0, Kp is 0.15, Ki is 0.35, Kd is 0.7, PID_Min is -0.1, PID_Max is 0.1. 
 	// General rule of thumb, set first stage dV to around 1700 - 1900 for Kerbin. Set the target AoA to (-(TWR^2))+1 ie. 1.51 = -1.25	
@@ -172,7 +173,7 @@ Function ff_GravityTurnAoA{
 /////////////////////////////////////////////////////////////////////////////////////	
 
 //This gravity turn is a work in progress however it it intended to follow a predefined path based on the ratio of atmospheric pressure  
-// Credit: Own recreate from general	
+// Credit: Own recreated from ideas in mix of general	
 Function ff_GravityTurnPres{
 	PARAMETER PresMultiple is 1.0.	
 	
@@ -198,7 +199,7 @@ Function ff_GravityTurnPres{
 } // End of Function
 
 /////////////////////////////////////////////////////////////////////////////////////
-// Credit: Own recreate from general	
+// Credit: Own recreated from ideas in mix of general	
 Function ff_Coast{ // intended to keep a low AoA and burn then coast to Ap allowing another function (hill climb in this case) to calculate the insertion burn
 	Print "Coasting Phase".
 	LOCK STEERING TO ship:facing:vector. //maintain current alignment
@@ -211,7 +212,7 @@ Function ff_Coast{ // intended to keep a low AoA and burn then coast to Ap allow
 }// End of Function
 
 /////////////////////////////////////////////////////////////////////////////////////
-// Credit: Own recreate from general
+// Credit: Own recreated from ideas in mix of general
 Function ff_InsertionPIDSpeed{ // PID Code stepping time to Apo. Note this can only attempt to launch into a circular orbit
 PARAMETER 	ApTarget, Kp is 0.3, Ki is 0.0002, Kd is 12, PID_Min is -0.1, PID_Max is 0.1, 
 			vKp is -0.01, vKi is 0.0002, vKd is 12, vPID_Min is -10, vPID_Max is 1000.
@@ -515,6 +516,7 @@ function hf_peg_cycle {
 
 ///////////////////////////////////////////////////////////////////////////////////
 // Credits: Same as ff_InsertionPEG
+
 // Estimate, returns A and B coefficient for guidance
 declare function hf_peg_solve {
     parameter T.//Estimated time until burnout

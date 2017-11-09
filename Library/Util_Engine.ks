@@ -15,6 +15,8 @@
 /////////////////////////////////////////////////////////////////////////////////////	
 //File Functions	
 /////////////////////////////////////////////////////////////////////////////////////	
+
+//Credits : Own with ideas chopped an changed from multiple KOS reddit posts
 	
 FUNCTION ff_STAGEFLAMEOUT {
 	PARAMETER Ullage is "RCS", stagewait is 2, ResFrac is 0.1.
@@ -24,7 +26,7 @@ FUNCTION ff_STAGEFLAMEOUT {
 	Print "Flameout".
 	
 	If Ullage = "RCS"{ /// ie. Use RCS or nothing to provide ullage
-	Print "RCS Falmeout".
+	Print "RCS Flameout".
 		///The following determiines the number of engines in the current stage that are flamed out.
 		FOR eng IN engList {  //Loops through Engines in the Vessel
 			IF eng:STAGE >= STAGE:NUMBER { //Check to see if the engine is in the current Stage
@@ -44,14 +46,14 @@ FUNCTION ff_STAGEFLAMEOUT {
 			STAGE. //Decouple
 			PRINT "RCS Ullage".
 			WAIT stageWait.
-			// TODOD: local propStat is "thePart":GetModule("ModuleEnginesRF"):GetField("propellantStatus"). Note this is not tested so it needs to be determined if it can work
+			// TODOD: local propStat is "thePart":GetModule("ModuleEnginesRF"):GetField("propellantStatus"). Note this is not tested so it needs to be determined if it can work with real fuels to determine if real feuls is installed
 			STAGE. // Start next Engine(s)
 			Set RCS to RCSState. //stop ullage or leave RCS on if it was on before
 		}
 	}
 	
-	If Ullage = "boost"{ //i.e starp on solids or other boosters around a main engine that continues to burn
-	Print "Boost Falmeout".
+	If Ullage = "boost"{ //i.e strap on solids or other boosters around a main engine that continues to burn so no ullage required
+	Print "Boost Flameout".
 		///The following determiines the number of engines in the current stage that are flamed out.
 		FOR eng IN engList {  //Loops through Engines in the Vessel
 			IF eng:STAGE >= STAGE:NUMBER { //Check to see if the engine is in the current Stage
@@ -69,7 +71,7 @@ FUNCTION ff_STAGEFLAMEOUT {
 	}
 	
 	If Ullage = "hot"{ /// ie. Doing a hot stage
-	Print "hot Falmeout".
+	Print "Hot Flameout".
 		///The following determiines the number of engines in the current stage that are flamed out.
 		local timeRem is ff_burn_time(ff_stage_delta_v()).
 		If stageWait > timeRem{ //Stage wait is actually the amount of burn time left in the tanks before stating the hot stage
@@ -80,8 +82,8 @@ FUNCTION ff_STAGEFLAMEOUT {
 		}
 	}
 	
-	If Ullage = "half"{ /// ie. Doing a half stage like atlas
-	Print "half Falmeout".
+	If Ullage = "half"{ /// ie. Doing a half stage like Atlas which is based on time
+	Print "Half Flameout".
 		///The following determiines the number of engines in the current stage that are flamed out.
 		local timeRem is ff_burn_time(ff_stage_delta_v()).
 		If stageWait > timeRem{ //Stage wait is actually the amount of burn time left in the tanks before stating the half staging
@@ -90,7 +92,7 @@ FUNCTION ff_STAGEFLAMEOUT {
 		}
 	}
 	
-	If Ullage = "fuel"{ /// ie. Doing a stage dependant on fuel remainng
+	If Ullage = "fuel"{ /// ie. Doing a stage dependant on fuel remainng for boosters like falcon 9
 	Print "fuel Falmeout".
 		If ResFrac > 0 {
 		/// the following determines the lowest fraction of fuel remaining in the current staged engines tanks.
@@ -112,6 +114,8 @@ FUNCTION ff_STAGEFLAMEOUT {
 } // End of Function
 	
 ///////////////////////////////////////////////////////////////////////////////////	
+
+//Credits : Not Own!! TODO attempt to find original source
 	
 Function ff_stage_delta_v {
 
@@ -164,6 +168,7 @@ local RSS is True.
 }./// End Function
 
 ///////////////////////////////////////////////////////////////////////////////////	
+//Credits: Multiple KOS rediit posts
 	
 function ff_burn_time {
 parameter dV.
@@ -185,6 +190,8 @@ parameter dV.
 }/// End Function
 
 ///////////////////////////////////////////////////////////////////////////////////	
+
+//Credits: Own
 	
 function ff_mdot {
 	local g is 9.81.  // Gravitational acceleration constant used in game for Isp Calculation (m/s²)
@@ -203,7 +210,7 @@ function ff_mdot {
 }/// End Function
 	
 ///////////////////////////////////////////////////////////////////////////////////	
-	
+//Credits: Own	
 	
 function ff_Vel_Exhaust {
 	local g is 9.81.  // Gravitational acceleration constant used in game for Isp Calculation (m/s²)

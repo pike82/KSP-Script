@@ -5,15 +5,13 @@
 // https://github.com/KK4TEE/kOSPrecisionLand
 
 ///// Download Dependant libraies
-//local Node_Calc is import("Node_Calc").
+local Util_Orbit is import("Util_orbit").
 
 
 ///////////////////////////////////////////////////////////////////////////////////
 ///// List of functions that can be called externally
 ///////////////////////////////////////////////////////////////////////////////////
 	local Flight is lex(
-		"Fall", ff_Fall@,
-		"Fall_Inst", ff_Fall_Inst@,
 		"Vectors",ff_Vectors@,
 		"Velocities",ff_Velocities@,
 		"Angles", ff_Angles@
@@ -22,6 +20,8 @@
 /////////////////////////////////////////////////////////////////////////////////////	
 //File Functions	
 /////////////////////////////////////////////////////////////////////////////////////	
+	
+	TODO: Develop function to allow for atmospheric re-entry landings
 	
 	//Locations
 	Set gl_NORTHPOLE to latlng( 90, 0).
@@ -32,41 +32,9 @@
 	//Ship information
 	lock gl_landedshipHeight to ship:Altitude - gl_surfaceElevation.	// calculates the height of the ship if landed, if not landed use the flight variable or set one up seperately	
 	
-	Function ff_Fall{
-	//Fall Predictions and Variables
-		Set fallTime to Orbit_Calc["quadraticPlus"](-gl_AvgGravity/2, -ship:verticalspeed, gl_baseALTRADAR).//r = r0 + vt - 1/2at^2 ===> Quadratic equiation 1/2*at^2 + bt + c = 0 a= acceleration, b=velocity, c= distance
-		Set fallVel to abs(ship:verticalspeed) + (gl_AvgGravity*fallTime).//v = u + at
-		Set fallAcc to (ship:AVAILABLETHRUST/ship:mass). // note is is assumed this will be undertaken in a vaccum so the thrust and ISP will not change. Otherwise if undertaken in the atmosphere drag will require a variable thrust engine so small variations in ISP and thrust won't matter becasue the thrust can be adjusted to suit.
-		lock fallDist to (fallVel^2)/ (2*(fallAcc)). // v^2 = u^2 + 2as ==> s = ((v^2) - (u^2))/2a 
-		
-		local arr is lexicon().
-		arr:add ("fallTime", fallTime).
-		arr:add ("fallVel", fallVel).
-		arr:add ("fallAcc", fallAcc).
-		arr:add ("fallDist", fallDist).
-		
-		Return(arr).
-	}
-	
-	Function ff_Fall_Inst{
-	//Instantaneous Predictions and variables
-		// lock gl_InstConImpactTime to gl_baseALTRADAR / abs(VERTICALSPEED). //gives instantaneous time to impact if vertical velocity remains constant
-		// Lock gl_InstMaxAcc to (ship:AVAILABLETHRUST / ship:mass). //gives max vertical acceleration at this point in time fighting gravity
-		// lock gl_InstkillTime to ((gl_totalSurfSpeed/gl_TWRTarget)* gl_GRAVITY) / (gl_TWRTarget). // t0 = Vel/TWR  t1 = t0*g/TWR Tf = t1 + t0 ==> ((Vel/TWR)*g)/TWR gives instantaneous time to kill all speed
-		// lock gl_InstfallDist to (gl_fallVel^2) / (2*(gl_InstMaxAcc)). // v^2 = u^2 + 2as ==> s = ((v^2) - (u^2))/2a
-		
-		// local arr is lexicon().
-		// arr:add ("fallTime", fallTime).
-		// arr:add ("fallVel", fallVel).
-		// arr:add ("fallAcc", fallAcc).
-		// arr:add ("fallDist", fallDist).
-		
-		// Return(arr).
-	}
-	
 	
 	Function ff_Vectors{
-	// //Flight Vectors Note: this is more for reference as its usually better to just type the vector in, rather than calleing this function.
+	// //Flight Vectors Note: this is more for reference as its usually better to just type the vector in, rather than calling this function.
 		set vec_right to SHIP:FACING:STARVECTOR. //right vector i.e. points same as right wing
 		//lock vec_left to (-1)*vec_right. //left vector i.e. points same as left wing
 		set vec_fore to SHIP:FACING:FOREVECTOR. //fore points through the nose

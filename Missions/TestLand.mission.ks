@@ -56,7 +56,7 @@ Function Mission_runModes{
 		Print "Run mode is:" + runMode["runMode"].
 		Stage.
 		Wait 60. //allow hyperedit
-		Landing_vac["CAB"]().
+		Landing_vac["CABLand"]().
 		gf_set_runmode("runMode",6.1).
 	}	
 
@@ -103,13 +103,13 @@ Function intParameters {
 
 //===LATITUDE (North) ====
 	//Desired velocity
-	Set sv_PIDLAT to PIDLOOP(1.0, 0.0, 5.0, 5/gl_DegDistance, -5/gl_DegDistance).//SET PID TO PIDLOOP(KP, KI, KD, MINOUTPUT, MAXOUTPUT).	
+	Set sv_PIDLAT to PIDLOOP(100.0, 0.0, 5.0, 5/gl_DegDistance, -5/gl_DegDistance).//SET PID TO PIDLOOP(KP, KI, KD, MINOUTPUT, MAXOUTPUT).	
 	//Desired direction
 	Set sv_PIDNorth to PIDLOOP(10000, 0, 0, -22.5, 22.5).// SET PID TO PIDLOOP(KP, KI, KD, MINOUTPUT, MAXOUTPUT).	
 
 //===LONGITUDE (East)====
 	//Desired velocity
-	Set sv_PIDLONG to PIDLOOP(0.5, 0, 2.5, -5/gl_DegDistance, 5/gl_DegDistance).// SET PID TO PIDLOOP(KP, KI, KD, MINOUTPUT, MAXOUTPUT).			
+	Set sv_PIDLONG to PIDLOOP(50, 0, 2.5, -5/gl_DegDistance, 5/gl_DegDistance).// SET PID TO PIDLOOP(KP, KI, KD, MINOUTPUT, MAXOUTPUT).			
 	//Desired direction	 
 	Set sv_PIDEast to PIDLOOP(10000, 0, 0, -22.5, 22.5).//SET PID TO PIDLOOP(KP, KI, KD, MINOUTPUT, MAXOUTPUT).	
 	

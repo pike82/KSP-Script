@@ -1,6 +1,9 @@
 
 { // Start of anon
 
+//Credits: All script and ideas are all from the following with a couple of modifications to allow more refined seeking if required:
+// http://youtube.com/gisikw
+
 ///////////////////////////////////////////////////////////////////////////////////
 ///// List of functions that can be called externally
 ///////////////////////////////////////////////////////////////////////////////////
@@ -48,8 +51,8 @@
 	parameter t, r, n, p, fitness, fine is False,
 			  data is list(t, r, n, p),
 			  fit is hf_orbit_fitness(fitness@).  // time, radial, normal, prograde, fitness are the parameters passed in for the node to be found. passes fitness through as a delegate to orbital fitness in this case { parameter mnv. return -mnv:orbit:eccentricity. } is passed through as a local function but any scorring evaluation can be passed through
-	set data to ff_optimize(data, fit, 10). // search in 100m/s incriments
-	set data to ff_optimize(data, fit, 1). // search in 10m/s incriments
+	set data to ff_optimize(data, fit, 10). // search in 10m/s incriments
+	set data to ff_optimize(data, fit, 1). // search in 1m/s incriments
 	set data to ff_optimize(data, fit, 0.1). // search in 0.1m/s incriments
 	fit(data). //sets the final manuver node and returns its parameters
 	If Fine{
@@ -66,9 +69,9 @@
 	parameter t, r, n, p, fitness, fine is False,
 			  data is list(t, r, n, p),
 			  fit is hf_orbit_fitness(fitness@).  // time, radial, normal, prograde, fitness are the parameters passed in for the node to be found. passes fitness through as a delegate to orbital fitness in this case { parameter mnv. return -mnv:orbit:eccentricity. } is passed through as a local function but any scorring evaluation can be passed through
-	set data to ff_optimize(data, fit, 1). // search in 100m/s incriments
-	set data to ff_optimize(data, fit, 0.1). // search in 10m/s incriments
-	set data to ff_optimize(data, fit, 0.01). // search in 0.1m/s incriments
+	set data to ff_optimize(data, fit, 1). // search in 1m/s incriments
+	set data to ff_optimize(data, fit, 0.1). // search in 0.1m/s incriments
+	set data to ff_optimize(data, fit, 0.01). // search in 0.01m/s incriments
 	fit(data). //sets the final manuver node and returns its parameters
 	If Fine{
 		set data to ff_optimize(data, fit, 0.001). // search in 0.01m/s incriments
@@ -110,7 +113,7 @@
 		return (v+""):indexof("frozen") <> -1.
 	}/// End Function
 	
-	///////////////////////////////////////////////////////////////////////////////////		  
+///////////////////////////////////////////////////////////////////////////////////		  
  
 	  
 	function hf_orbit_fitness {

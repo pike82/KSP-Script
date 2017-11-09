@@ -1,6 +1,9 @@
 
 {// anon Function keeps all variables and functions used within here preventing them from being global unless stated as global
 
+//Credits: All script and ideas are all from the following with a couple of modifications:
+// http://youtube.com/gisikw
+
 //The KNU Kerbal Not Unix format (see ep 34 vi on youtube for details). 
 //This is designed to pass function values into libraries and retrive the results since functions cannont be called from otherfunctions past a certian level
 

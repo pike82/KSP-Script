@@ -1,6 +1,8 @@
 
 { // Start of anon
 
+//Credits: Own with utilisation of code and credits within the Hill Climb file.
+
 ///// Download Dependant libraies
 local Hill_Climb is import("Hill_Climb").
 local OrbMnvNode is import("OrbMnvNode").
@@ -24,7 +26,7 @@ local Util_Orbit is import("Util_Orbit").
 
 //Ideas:
 
-//look-into hoffman transfers where can use position at(orbit,time) to determine where a body will be and then make a manuver to meet it at the same time intead of purely node iterations through hill climb.
+//look-into hohmann transfers where can use position at(orbit,time) to determine where a body will be and then make a manuver to meet it at the same time intead of purely node iterations through hill climb.
 
 Function ff_BodyTransfer {	
 Parameter target_Body, Target_Perapsis, maxDV is 1000, IncTar is 90, int_Warp is False. // note the target name does not need to be sourrounded by quotations
@@ -38,6 +40,8 @@ Parameter target_Body, Target_Perapsis, maxDV is 1000, IncTar is 90, int_Warp is
 }  /// End Function
 	
 ///////////////////////////////////////////////////////////////////////////////////
+
+//Credits: Own
 	
 Function ff_CraftTransfer {	
 	Parameter target_ves, Target_dist, Max_orbits, int_Warp is False. // note the target name does not need to be sourrounded by quotations
@@ -68,6 +72,7 @@ Function ff_CraftTransfer {
 ///////////////////////////////////////////////////////////////////////////////////
 //Helper Functions
 /////////////////////////////////////////////////////////////////////////////////////
+//Credits: http://youtube.com/gisikw
 	  
 function hf_seek_SOI {
 	parameter target_body, target_periapsis, IncTar, maxDV,
@@ -100,6 +105,7 @@ function hf_seek_SOI {
 
 
 ///////////////////////////////////////////////////////////////////////////////////
+//Credits: Own
 	  
 function hf_TransferInc {
 parameter target_vessel, target_distance, int_Warp is False.
@@ -127,6 +133,7 @@ parameter target_vessel, target_distance, int_Warp is False.
 } //end function TransferInc
 
 ///////////////////////////////////////////////////////////////////////////////////	
+//Credits: Own
 
 Function hf_Orbit_Phasing {	
 parameter target_vessel, Max_orbits.
@@ -204,6 +211,7 @@ parameter target_vessel, Max_orbits.
 } // End Function
 
 ///////////////////////////////////////////////////////////////////////////////////
+//Credits: Own
 
 function hf_TransferBurn {
 parameter target_vessel, target_distance, Max_orbits, int_Warp is False.
@@ -301,6 +309,7 @@ Return result["Time"].
 } //end function transferburn
 
 ///////////////////////////////////////////////////////////////////////////////////
+//Credits: Own
 
 function hf_TransferRV {
 parameter target_vessel, target_distance, result, int_Warp is False.
@@ -327,6 +336,7 @@ parameter target_vessel, target_distance, result, int_Warp is False.
 } //end function transfer RV
 
 ///////////////////////////////////////////////////////////////////////////////////	
+//Credits: http://youtube.com/gisikw
 	  
 function hf_transfers_to {
 parameter target_orbit, target_body.
@@ -335,6 +345,7 @@ return (target_orbit:hasnextpatch and
 }/// End Function
 
 ///////////////////////////////////////////////////////////////////////////////////		  
+//Credits: http://youtube.com/gisikw
 	  
 function hf_closest_approach {
 parameter target_body, start_time, end_time.
@@ -357,6 +368,7 @@ return hf_separation_at(target_body, middle_time).
 }/// End Function
 
 ///////////////////////////////////////////////////////////////////////////////////		  
+//Credits: http://youtube.com/gisikw
 	  
 function hf_slope_at {
 parameter target_body, at_time.
@@ -367,6 +379,7 @@ return (
 }/// End Function
 
 ///////////////////////////////////////////////////////////////////////////////////		  
+//Credits: http://youtube.com/gisikw
 	  
 function hf_separation_at {
 parameter target_body, at_time.
@@ -375,6 +388,7 @@ parameter target_body, at_time.
 }/// End Function
 
 ///////////////////////////////////////////////////////////////////////////////////	
+//Credits: http://youtube.com/gisikw
 
 function hf_separation_orbits {
 parameter target_body, Start_time, EndTime, StepSize, Target_distance is 1500.
@@ -396,6 +410,8 @@ Set WinTime to 0.
 }/// End Function
 
 ///////////////////////////////////////////////////////////////////////////////////	
+
+//Credits: http://youtube.com/gisikw
 
 Function hf_find_intersect {
 parameter target_vessel, Starting_time, Target_distance, Max_Orb_UT, atm_Height, Modifier is "not used".
@@ -431,6 +447,7 @@ Local tempResult is 0.
 } // End Function
 
 ///////////////////////////////////////////////////////////////////////////////////	
+//Credits: Own
 
 Function hf_ecc_modifier{
 Parameter lower_val, higher_val.
