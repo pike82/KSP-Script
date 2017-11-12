@@ -21,7 +21,7 @@ local Util_Orbit is import("Util_orbit").
 //File Functions	
 /////////////////////////////////////////////////////////////////////////////////////	
 	
-	TODO: Develop function to allow for atmospheric re-entry landings
+	//TODO: Develop function to allow for atmospheric re-entry landings
 	
 	//Locations
 	Set gl_NORTHPOLE to latlng( 90, 0).

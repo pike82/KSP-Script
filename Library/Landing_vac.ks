@@ -18,7 +18,6 @@ local Util_Orbit is import("Util_orbit").
 
 	local landing_vac is lex(
 		"SuBurn",ff_SuBurn@,
-		"CABLand", ff_CABLand@,
 		"CAB", ff_CAB@,
 		"BestLand", ff_BestLand@,
 		"HoverLand",ff_HoverLand@,
@@ -35,7 +34,7 @@ Parameter ThrottelStartUp is 0.1, SafeAlt is 75, EndVelocity is 0.5. // end velo
 	local Flight_Arr is lexicon().
 	set Flight_Arr to hf_fall().
 	PRINT flight_arr.
-	
+	LOCK STEERING to HEADING(90,90).
 	Print "gl_fallTime:" + Flight_Arr["fallTime"].
 	Print "gl_fallVel:" + Flight_Arr["fallVel"].
 	Print "gl_fallDist:" + Flight_Arr["fallDist"].
@@ -58,6 +57,7 @@ Parameter ThrottelStartUp is 0.1, SafeAlt is 75, EndVelocity is 0.5. // end velo
 		Lock Throttle to 1.0.
 		if (gl_baseALTRADAR < 0.25) or (Ship:Status = "LANDED"){
 			Lock Throttle to 0.
+			Unlock Throttle.
 			Break.
 		}
 	} // end Until
@@ -73,17 +73,18 @@ Parameter Hover_alt is 50, BaseLoc is gl_shipLatLng.
 	Set sv_PIDALT:SETPOINT to Hover_alt.
 	Set sv_PIDLAT:Setpoint to BaseLoc:Lat.
 	Set sv_PIDLONG:Setpoint to BaseLoc:Lng.
+	Set sv_PIDDIST:Setpoint to 0.
 	Set SteerDirection to HEADING(90,90).
 	LOCK STEERING TO SteerDirection.
 	Set distanceTol to 0.	
 	local dtStore is lexicon().
 	dtStore:add("lastdt", TIME:SECONDS).
-	dtStore:add("lastLat",0).
-	dtStore:add("lastLng",0).	
+	dtStore:add("lastPos",LATLNG(0,0)).
 	Until distanceTol > 3 { // until the ship is hovering above the set down loaction for 3 seconds (to allow for PID stability)
-
-		Set dtStore to hf_LandingPIDControlLoop(dtStore["lastdt"], dtStore["lastLat"], dtStore["lastLng"]).
-		if hf_gs_distance(BaseLoc, gl_shipLatLng) < 0.1{
+		ClearScreen.
+		Print "Moving to Landing Position".	
+		Set dtStore to hf_LandingPIDControlLoop(dtStore["lastdt"], dtStore["lastPos"]).
+		if hf_gs_distance(BaseLoc, gl_shipLatLng) < 0.5{ //0.5m error before descent
 			Set distanceTol to distanceTol + 0.1.	
 		}
 		Else{
@@ -92,12 +93,17 @@ Parameter Hover_alt is 50, BaseLoc is gl_shipLatLng.
 
 		Wait 0.1.
 	}	
-	Print "Landing".
+	Set SteerDirection to HEADING(90,90).
+
 	Set sv_PIDALT:SETPOINT to -0.25. // set just below the surface to ensure touchdown
 	Until(gl_baseALTRADAR < 0.25) or (Ship:Status = "LANDED"){
-		Set dtStore to hf_LandingPIDControlLoop(dtStore["lastdt"], dtStore["lastLat"], dtStore["lastLng"]).
+		ClearScreen.
+		Print "Landing".
+		Set dtStore to hf_LandingPIDControlLoop(dtStore["lastdt"], dtStore["lastPos"]).
+		Wait 0.01.
 	}
 	Lock Throttle to 0.
+	Unlock Throttle.
 } //End of Function
 
 ////////////////////////////////////////////////////////////////
@@ -107,7 +113,7 @@ Parameter Hover_alt is 50, BaseLoc is gl_shipLatLng.
 
 //Credits: OWN
 
-Function ff_CABLand{ 
+Function ff_CAB{ 
 	//this landing tries to burn purely horizontal and uses a pid to determine the desired downwards velocity and then a second PID to determine the pitch required to maintain the desire downward velocity
 
 	Parameter ThrottelStartTime is 0.1, SafeAlt is 50, TargetLatLng is "Null", MaxSlopeAng is 1, EndHorzVel is 0. // throttle start time is the time it take the trottle to get up to full power
@@ -171,16 +177,10 @@ Function ff_CABLand{
 	Set PIDVV to PIDLOOP(0.03, 0, 0.05, -0.1, 0.1).//SET PID TO PIDLOOP(KP, KI, KD, MINOUTPUT, MAXOUTPUT).	
 	Set PIDVV:SETPOINT to 0. // we want the altitude to remain constant so no vertical velocity.
 	Set highpitch to 0.
-	Set FixHeading to Ship:bearing.
-	if (Fixheading + 180) < 360 {
-		set FixHeading to FixHeading + 180.
-	}
-	Else{
-		set FixHeading to FixHeading - 180.
-	}
-	LOCK STEERING TO HEADING(FixHeading, highPitch). //move to pitchover angle
-	Set Basetime to time:seconds.
+
+	lock steering to retrograde * r(-highPitch, 0, 0):vector.
 	
+	Set Basetime to time:seconds.
 	
 	Until (Basetime + profiletime) - time:seconds < 0 OR SHIP:GROUNDSPEED < 1{
 		Lock Throttle to 1.0.
@@ -195,21 +195,17 @@ Function ff_CABLand{
 	}
 	Lock Throttle to 0.0.
 	lock steering to ship:up:vector. // point upwards
-	
-//Suicide Burn Calcls
-	Print "Conducting Suicide Burn".
-	ff_suBurn().
-	Print "Conducting hover Landing".
-	ff_hoverLand().
-	
+	unlock FixHeading.
+		
 } //End of Function
 
 ////////////////////////////////////////////////////////////////
 
-Function ff_CAB{ 
-	
-	//this landing tries to burn purely horizontal and uses a pid to determine the desired downwards velocity and then a second PID to determine the pitch required to maintain the desire downward velocity
+//Credits: OWN
 
+Function ff_BestLand{ 
+	Parameter ThrottelStartTime is 0.1, SafeAlt is 50, TargetLatLng is "Null", ThrottelStartUp is 0, MaxSlopeAng is 1, EndHorzVel is 0. // throttle start time is the time it take the trottle to get up to full power
+	
 	Set PEVec to velocityat(Ship, ETA:PERIAPSIS + TIME:SECONDS):Surface.
 	Print "Vel at PE "+PEVec:mag.
 	//horizontal
@@ -225,26 +221,31 @@ Function ff_CAB{
 
 	
 	Set Horzvel to PeHorzVel. // create a temp vel for the simulation
+	Set VerDist to 0. // rough estimate based on no starting vertical velocity
+	Set VerVel to 0.// rough estimate based on no starting vertical velocity
 	Set Dist to 0.
 	Set profiletime to 0.
 	Set tgtPERad to Orbit:Periapsis+body:radius.
 	Set StartMass to (ship:mass * 1000).
-	until Horzvel <= 0 {//run the iteration until the velocity is 0
+	until Horzvel <= EndHorzVel {//run the iteration until the ground velocity is 0 or another value if specified
+		Set VerVelStart to VerVel.
 		Set StartMass to StartMass - Util_Engine["mdot"]().
 		Set acc to (ship:availablethrust* 1000)/(StartMass). //the acceleration of the ship in one second
-		
-		Set HozBurnTimeGravCancel to ((body:mu/(tgtPERad^2)) - ((PeHorzVel^2)/tgtPERad))/acc. //portion of vehicle acceleration used to counteract gravity as per PEG ascent guidance formula in one second
-		
-		Set Horzvel to Horzvel - abs(acc - HozBurnTimeGravCancel). // current horz velocity minus the acceleration in the horitontal direction.
+		Set VertAccel to ((body:mu/((tgtPERad-VerDist)^2)) - ((Horzvel^2)/(tgtPERad-VerDist))). //portion of vehicle acceleration used to counteract gravity as per PEG ascent guidance formula in one second
+		Set VerVel to VerVelStart - abs(VertAccel). // current vertical velocity.
+		Set VerDist to VerDist - ((VerVelStart + VerVel)/2).
+		Set Horzvel to Horzvel - abs(acc).
 		Set dist to dist + Horzvel.
 		Set profiletime to profiletime + 1.
 		Clearscreen.
 		Print acc.
-		Print HozBurnTimeGravCancel.
+		Print VertAccel.
 		Print Horzvel.
+		Print VerDist.
+		Print VerVel.
 		Print dist.
 		Print profiletime.
-		wait 0.01.
+		wait 0.001.
 	}
 	
 	Print "Burn Time :" + profiletime.
@@ -255,31 +256,36 @@ Function ff_CAB{
 		Set BurnStartTime to BurnStartTime + Ship:orbit:period. // ensures it will start the burn on the next orbit if too early with a 10 second buffer to allow for alignment and processing finish
 	}
 	
-
 	Until time:seconds > BurnStartTime{
 		clearscreen.
 		Print "Burn Time :" + profiletime.
-		Print "Burn Velocity:" + Horzvel.
+		Print "Burn VerVel:" + VerVel.
+		Print "Burn Fall:" + VerDist.
 		Print "Burn Dist:" + dist.
 		Print "Wating for burn Start in :" + (BurnStartTime - Time:seconds).
 		Lock steering to ship:retrograde. 
 		wait 0.01.
 	}
-	Print "Starting CAB".
+	Print "Starting Burn".
+	local Flight_Arr is lexicon().
+	set Flight_Arr to hf_fall().
+	Set Basetime to time:seconds.
+	
+	until Flight_Arr["fallDist"] + SafeAlt + (ThrottelStartUp * abs(ship:verticalspeed)) + (5* abs(ship:verticalspeed)) > gl_baseALTRADAR or (Basetime + profiletime) - time:seconds < 0 OR SHIP:GROUNDSPEED < 1{ //TODO: GEt rid of the hard coded 5 seconds which allows the craft to rotate for suicide burn.
+		Lock Throttle to 1.0.
+		Set highpitch to 0.
+		set vs to velocity:surface.
+		LOCK STEERING TO VXCL(UP:VECTOR, -VELOCITY:SURFACE).//lock to retrograde
+		Clearscreen.
+		Print "Free Fall".
+		Print "Ground Speed: " + SHIP:GROUNDSPEED.
+		Print "Pitch: " + highpitch.
+		Print "Burn Ending in : " + ((Basetime + profiletime) - time:seconds).
+		Wait 0.01.
+	}
 	
 	Set PIDVV to PIDLOOP(0.03, 0, 0.05, -0.1, 0.1).//SET PID TO PIDLOOP(KP, KI, KD, MINOUTPUT, MAXOUTPUT).	
 	Set PIDVV:SETPOINT to 0. // we want the altitude to remain constant so no vertical velocity.
-	Set highpitch to 0.
-	Set FixHeading to Ship:bearing.
-	if (Fixheading + 180) < 360 {
-		set FixHeading to FixHeading + 180.
-	}
-	Else{
-		set FixHeading to FixHeading - 180.
-	}
-	LOCK STEERING TO HEADING(FixHeading, highPitch). //move to pitchover angle
-	Set Basetime to time:seconds.
-	
 	
 	Until (Basetime + profiletime) - time:seconds < 0 OR SHIP:GROUNDSPEED < 1{
 		Lock Throttle to 1.0.
@@ -287,6 +293,7 @@ Function ff_CAB{
 		Set dpitch TO PIDVV:UPDATE(TIME:SECONDS, verticalspeed). //Get the PID on the AlT diff as desired vertical velocity
 		Set highpitch to max(highpitch + dpitch,0). // Ensure the pitch does not go below zero as gravity will efficently lower the veritcal velocity if required
 		Clearscreen.
+		Print "CAB".
 		Print "Ground Speed: " + SHIP:GROUNDSPEED.
 		Print "Pitch: " + highpitch.
 		Print "Burn Ending in : " + ((Basetime + profiletime) - time:seconds).
@@ -294,160 +301,161 @@ Function ff_CAB{
 	}
 	Lock Throttle to 0.0.
 	lock steering to ship:up:vector. // point upwards
+	unlock FixHeading.
 } //End of Function
 
-////////////////////////////////////////////////////////////////
+// ////////////////////////////////////////////////////////////////
 
-//Credits: OWN
+// //Credits: OWN
 
-Function ff_BestLand{ 
-	Parameter ThrottelStartTime is 0.1, SafeAlt is 50, TargetLatLng is "Null", MaxSlopeAng is 1.
+// Function ff_BestLand{ 
+	// Parameter ThrottelStartTime is 0.1, SafeAlt is 50, TargetLatLng is "Null", MaxSlopeAng is 1.
 	
-	//this landing tries to burn purely horizontal and uses a pid to determine the desired downwards velocity and then a second PID to determine the pitch required to maintain the desire downward velocity
+	// //this landing tries to burn purely horizontal and uses a pid to determine the desired downwards velocity and then a second PID to determine the pitch required to maintain the desire downward velocity
 	
 	
-	//Determine Body Rotation during transit to landing
-	Set Bod_rot to Ship:Body:RotationPeriod.
-	Print "Bod_rot " + Bod_rot.
-	Set Bod_Ang_Ajust to (ETA:PERIAPSIS /Bod_rot)*360. //angle of roation the body will incur before the ship get to the PE
-	Print "Bod_Ang_Ajust " + Bod_Ang_Ajust.
-	Set Bod_rot_Dir to Ship:Body:Angularvel.
-	Print "Bod_rot_Dir " + Bod_rot_Dir.
+	// //Determine Body Rotation during transit to landing
+	// Set Bod_rot to Ship:Body:RotationPeriod.
+	// Print "Bod_rot " + Bod_rot.
+	// Set Bod_Ang_Ajust to (ETA:PERIAPSIS /Bod_rot)*360. //angle of roation the body will incur before the ship get to the PE
+	// Print "Bod_Ang_Ajust " + Bod_Ang_Ajust.
+	// Set Bod_rot_Dir to Ship:Body:Angularvel.
+	// Print "Bod_rot_Dir " + Bod_rot_Dir.
 
 	
-	//TODO: work out how to tell if the orbit is in the same direction as the body rotation.
-	Set PePos to positionat(Ship, ETA:PERIAPSIS + TIME:SECONDS). //Returns the ship-raw position at the PE
-	Set PePos to ship:Body:GEOPOSITIONOF(PePos). //Converts the predicted PE into geo-cordinates
-	Print "Int PePos " + PePos:Lat.
-	Set PePos:Lat to PePos:Lat - Bod_Ang_Ajust. //TODO: Ensure this does not need a Clamp angle function for multiple roations or large values that make things negative
-	Print "Adj PePos " + PePos:Lat.
+	// //TODO: work out how to tell if the orbit is in the same direction as the body rotation.
+	// Set PePos to positionat(Ship, ETA:PERIAPSIS + TIME:SECONDS). //Returns the ship-raw position at the PE
+	// Set PePos to ship:Body:GEOPOSITIONOF(PePos). //Converts the predicted PE into geo-cordinates
+	// Print "Int PePos " + PePos:Lat.
+	// Set PePos:Lat to PePos:Lat - Bod_Ang_Ajust. //TODO: Ensure this does not need a Clamp angle function for multiple roations or large values that make things negative
+	// Print "Adj PePos " + PePos:Lat.
 	
-	//Determine Ship Orbit particulars landing
-	Set Orbitarr to Orbit_Calc["OrbitSplitVel"]().
+	// //Determine Ship Orbit particulars landing
+	// Set Orbitarr to Orbit_Calc["OrbitSplitVel"]().
 
-	//Set ShipPeUpVec to PePos - body:position.
-	Set PEVec to velocityat(Ship, ETA:PERIAPSIS + TIME:SECONDS):Surface.
-	Print "Vel at PE "+PEVec:mag.
-	//horizontal
-	Set PeHorzVel to PEVec:mag. // its known at PE the verVel is Zero so all velocity must be horizontal	
-	Print "HVel at PE " + PeHorzVel.
-	Set PeHorzVel to Orbitarr["Horz_V"].
-	Print "Calc HVel at PE " + PeHorzVel.
+	// //Set ShipPeUpVec to PePos - body:position.
+	// Set PEVec to velocityat(Ship, ETA:PERIAPSIS + TIME:SECONDS):Surface.
+	// Print "Vel at PE "+PEVec:mag.
+	// //horizontal
+	// Set PeHorzVel to PEVec:mag. // its known at PE the verVel is Zero so all velocity must be horizontal	
+	// Print "HVel at PE " + PeHorzVel.
+	// Set PeHorzVel to Orbitarr["Horz_V"].
+	// Print "Calc HVel at PE " + PeHorzVel.
 	
-	//Vertical
-	Set PeVerVel to 0. // its known at PE the verVel is Zero
-	Print "Calc VVel at PE " + PeVerVel.
-	Set PeVerVel to Orbitarr["Vert_V"].
-	Print "Calc VVel at PE " + PeVerVel.
+	// //Vertical
+	// Set PeVerVel to 0. // its known at PE the verVel is Zero
+	// Print "Calc VVel at PE " + PeVerVel.
+	// Set PeVerVel to Orbitarr["Vert_V"].
+	// Print "Calc VVel at PE " + PeVerVel.
 	
-	//PE Suicide Burn Calcls
+	// //PE Suicide Burn Calcls
 	
-	Set PeVerBurnDist to Orbit:Periapsis - (PePos:TERRAINHEIGHT + SafeAlt). 
-	Set Gravarr to Util_Vessel["Gravity"](PeVerBurnDist).
-	Set SuInfoarr to Util_Landing["Suicide_info"](Gravarr["AVG"],PeVerBurnDist).
-	Set PeFallTime to SuInfoarr["Time"].
-	Set PeFallVel to SuInfoarr["Vel"].
-	Set PeFallDist to SuInfoarr["Dist"].
+	// Set PeVerBurnDist to Orbit:Periapsis - (PePos:TERRAINHEIGHT + SafeAlt). 
+	// Set Gravarr to Util_Vessel["Gravity"](PeVerBurnDist).
+	// Set SuInfoarr to Util_Landing["Suicide_info"](Gravarr["AVG"],PeVerBurnDist).
+	// Set PeFallTime to SuInfoarr["Time"].
+	// Set PeFallVel to SuInfoarr["Vel"].
+	// Set PeFallDist to SuInfoarr["Dist"].
 	
-	Print "PeVerBurnDist " + PeVerBurnDist.
-	Print "PeFallDist " + PeFallDist.
+	// Print "PeVerBurnDist " + PeVerBurnDist.
+	// Print "PeFallDist " + PeFallDist.
 	
-	//times
-	Set HorzBurnTime to Util_Engine["burn_time"](PeHorzVel). // Burn Time if pure horizontal burn
-	Set HozBurnTimeGravCancel to (HorzBurnTime /(sqrt(Gravarr["AVG"]^2 + gl_TWR^2))/ HorzBurnTime ). //Approximate Burn Time required if performing CAB to PE
-	Set VerBurnTime to Util_Engine["burn_time"](PeFallVel). //Burn time required if performing Suicide burn falling from PE
-	Print "HorzBurnTime " + HorzBurnTime.
-	Print "HozBurnTimeGravCancel " + HozBurnTimeGravCancel.
-	Print "VerBurnTime " + VerBurnTime.
-	
-	
-	Set VertDropDuringBurn to Gravarr["AVG"]*(HorzBurnTime/2). //this is an estimate in that is assumes in a circular orbit the ground falls away as fast as gravity accelrates it. If you slow down then then gravity can accelerate you quicker than the ground drops away. As the final Speed is zero it is assumed the average gravity accelerationdownwards is 1/2 the gravity  v= sqrt(mu/sma)
-	Print "VertDropDuringBurn " + VertDropDuringBurn.
-	Set HeightafterHorzBurn to PeVerBurnDist-VertDropDuringBurn.
-	Print "HeightafterHorzBurn " + HeightafterHorzBurn.
+	// //times
+	// Set HorzBurnTime to Util_Engine["burn_time"](PeHorzVel). // Burn Time if pure horizontal burn
+	// Set HozBurnTimeGravCancel to (HorzBurnTime /(sqrt(Gravarr["AVG"]^2 + gl_TWR^2))/ HorzBurnTime ). //Approximate Burn Time required if performing CAB to PE
+	// Set VerBurnTime to Util_Engine["burn_time"](PeFallVel). //Burn time required if performing Suicide burn falling from PE
+	// Print "HorzBurnTime " + HorzBurnTime.
+	// Print "HozBurnTimeGravCancel " + HozBurnTimeGravCancel.
+	// Print "VerBurnTime " + VerBurnTime.
 	
 	
-	//vi-viva equation   v^2 = mu((2/r)  -  (1/sma))
-	// Velocity at the end of the burn is the body rotational speed with no vertical speed therefore in theory you can work out the new SMA if you know what height the burn will end at, or you can work out the velocity change required.
-	// Re-arrange to get the SMA => mu/sma = mu/r - v^2  => sma/mu = r/mu - 1/v^2  => sma = r - mu/v^2
+	// Set VertDropDuringBurn to Gravarr["AVG"]*(HorzBurnTime/2). //this is an estimate in that is assumes in a circular orbit the ground falls away as fast as gravity accelrates it. If you slow down then then gravity can accelerate you quicker than the ground drops away. As the final Speed is zero it is assumed the average gravity accelerationdownwards is 1/2 the gravity  v= sqrt(mu/sma)
+	// Print "VertDropDuringBurn " + VertDropDuringBurn.
+	// Set HeightafterHorzBurn to PeVerBurnDist-VertDropDuringBurn.
+	// Print "HeightafterHorzBurn " + HeightafterHorzBurn.
 	
 	
-	Print "Estimated SMA after burn " + (PeVerBurnDist - (body:mu/((Ship:Body:Angularvel:mag)^2))).
-	Print "Estimated min dv Change required to move orbits" + ship:VELOCITY:orbit:mag - Ship:Body:Angularvel:mag.
+	// //vi-viva equation   v^2 = mu((2/r)  -  (1/sma))
+	// // Velocity at the end of the burn is the body rotational speed with no vertical speed therefore in theory you can work out the new SMA if you know what height the burn will end at, or you can work out the velocity change required.
+	// // Re-arrange to get the SMA => mu/sma = mu/r - v^2  => sma/mu = r/mu - 1/v^2  => sma = r - mu/v^2
 	
 	
-	If HeightafterHorzBurn > PeFallDist{
-	// then we know that we can burn purely horizontal then conduct as a vertical suicide burn afterwards.
-		lock steering to - vcrs(SHIP:UP:VECTOR,SHIP:FACING:STARVECTOR). //point retrograde to the horizon
-		//We also want to chack how accurate our Vertical drop during burn estimate was.
-		Set BurnStartHeight to Altitude.
-		until ETA:PERIAPSIS < HorzBurnTime { //a waiting routine until the correct burn start time arrives. Wait until has not been used as this way aloows measurments and print screens in the mean time if desired.
-			wait 0.01. 
-		}
-		Print "Undertaking Horizontal Only Burn".
-		Set BurnFinishHeight to Altitude.
-		until ship:velocity:surface < 1 { //unitl the horizontal speed over the ground is less than one
-			Lock Throttle to 1.0.
-			wait 0.01.
-		}
-		Lock Throttle to 0.0.
-		lock steering to ship:up:vector. // point upwards
-		Print "Horizontal only Burn has ended".
+	// Print "Estimated SMA after burn " + (PeVerBurnDist - (body:mu/((Ship:Body:Angularvel:mag)^2))).
+	// Print "Estimated min dv Change required to move orbits" + ship:VELOCITY:orbit:mag - Ship:Body:Angularvel:mag.
+	
+	
+	// If HeightafterHorzBurn > PeFallDist{
+	// // then we know that we can burn purely horizontal then conduct as a vertical suicide burn afterwards.
+		// lock steering to - vcrs(SHIP:UP:VECTOR,SHIP:FACING:STARVECTOR). //point retrograde to the horizon
+		// //We also want to chack how accurate our Vertical drop during burn estimate was.
+		// Set BurnStartHeight to Altitude.
+		// until ETA:PERIAPSIS < HorzBurnTime { //a waiting routine until the correct burn start time arrives. Wait until has not been used as this way aloows measurments and print screens in the mean time if desired.
+			// wait 0.01. 
+		// }
+		// Print "Undertaking Horizontal Only Burn".
+		// Set BurnFinishHeight to Altitude.
+		// until ship:velocity:surface < 1 { //unitl the horizontal speed over the ground is less than one
+			// Lock Throttle to 1.0.
+			// wait 0.01.
+		// }
+		// Lock Throttle to 0.0.
+		// lock steering to ship:up:vector. // point upwards
+		// Print "Horizontal only Burn has ended".
 		
-		Print "Burn Fall distance " + BurnStartHeight - BurnFinishHeight.
+		// Print "Burn Fall distance " + BurnStartHeight - BurnFinishHeight.
 	
-	}
-	Else{
-	//We know a constant or partial altitude rasing burn will need to be done. We need to know the difference in height between the estimated hieghts in the if statement above and create an estimate of how this will affect the burn time required.
+	// }
+	// Else{
+	// //We know a constant or partial altitude rasing burn will need to be done. We need to know the difference in height between the estimated hieghts in the if statement above and create an estimate of how this will affect the burn time required.
 	
-	//input PID loop here to change the pitch based on the desired vertical velocity based on the distance away from the vertical suicide burn start
+	// //input PID loop here to change the pitch based on the desired vertical velocity based on the distance away from the vertical suicide burn start
 	
-		//Current Suicide burn Calcs
+		// //Current Suicide burn Calcs
 	
-		Set DistToStop to Altitude - gl_PeLatLng:TERRAINHEIGHT - SafeAlt. // Calculates the distance between the craft and the intended stopping height
-		Set CurrGravarr to Util_Vessel["Gravity"](DistToStop).
-		Set CurrSuInfoarr to Util_Landing["Suicide_info"](CurrGravarr["AVG"],DistToStop).
-		Set CurrFallTime to CurrSuInfoarr["Time"].
-		Set CurrFallVel to CurrSuInfoarr["Vel"].
-		Set CurrSuDist to CurrSuInfoarr["dist"].	
-		Set BurnHeightDiff to DistToStop - CurrSuDist. // the currect distance until the suicde burn needs to start.
+		// Set DistToStop to Altitude - gl_PeLatLng:TERRAINHEIGHT - SafeAlt. // Calculates the distance between the craft and the intended stopping height
+		// Set CurrGravarr to Util_Vessel["Gravity"](DistToStop).
+		// Set CurrSuInfoarr to Util_Landing["Suicide_info"](CurrGravarr["AVG"],DistToStop).
+		// Set CurrFallTime to CurrSuInfoarr["Time"].
+		// Set CurrFallVel to CurrSuInfoarr["Vel"].
+		// Set CurrSuDist to CurrSuInfoarr["dist"].	
+		// Set BurnHeightDiff to DistToStop - CurrSuDist. // the currect distance until the suicde burn needs to start.
 		
-		Set DesiredVertVel to BurnHeightDiff*0.3. //TODO: adjust this arbitary value and even put in a PID if required.
+		// Set DesiredVertVel to BurnHeightDiff*0.3. //TODO: adjust this arbitary value and even put in a PID if required.
 	
-	}
+	// }
 	
 		
-	//Create PID to adjust the craft pitch (without thrusting downward) which maintains a BurnHeightDiff of zero and regulates the velocity of burn height change if not zero reventing a pitch above the horizontal.
+	// //Create PID to adjust the craft pitch (without thrusting downward) which maintains a BurnHeightDiff of zero and regulates the velocity of burn height change if not zero reventing a pitch above the horizontal.
 	
 
 		
-	Until ETA:PERIAPSIS < HorzBurnTime {
-	lock steering to ship:retrograde. //point retrograde
-		Clearscreen.
-		Print PeHorzVel.
-		Print PeVerBurnDist.
-		Print PeFallTime.
-		Print HorzBurnTime.
-		Print VerBurnTime.
-		Print totalBurnTime.
-		Print ETA:PERIAPSIS.
-		wait 0.01.
-	}
-	Print "Starting CAB".
-	Set Start_burn_time to time:seconds.
-	Set HorzBurnTimeEta to HorzBurnTime + Start_burn_time.
-	Set TotBurnTimeEta to HorzBurnTime + Start_burn_time.
-	Print Start_burn_time.
-	Print HorzBurnTimeEta.
-	Print TotBurnTimeEta.
-	Print time:seconds.
-	Until time:seconds > HorzBurnTimeEta{
-		Lock Throttle to 1.0.
-		wait 0.01.
-	}
-	Lock Throttle to 0.0.
-	lock steering to ship:up:vector. // point upwards
-} //End of Function
+	// Until ETA:PERIAPSIS < HorzBurnTime {
+	// lock steering to ship:retrograde. //point retrograde
+		// Clearscreen.
+		// Print PeHorzVel.
+		// Print PeVerBurnDist.
+		// Print PeFallTime.
+		// Print HorzBurnTime.
+		// Print VerBurnTime.
+		// Print totalBurnTime.
+		// Print ETA:PERIAPSIS.
+		// wait 0.01.
+	// }
+	// Print "Starting CAB".
+	// Set Start_burn_time to time:seconds.
+	// Set HorzBurnTimeEta to HorzBurnTime + Start_burn_time.
+	// Set TotBurnTimeEta to HorzBurnTime + Start_burn_time.
+	// Print Start_burn_time.
+	// Print HorzBurnTimeEta.
+	// Print TotBurnTimeEta.
+	// Print time:seconds.
+	// Until time:seconds > HorzBurnTimeEta{
+		// Lock Throttle to 1.0.
+		// wait 0.01.
+	// }
+	// Lock Throttle to 0.0.
+	// lock steering to ship:up:vector. // point upwards
+// } //End of Function
 
 ////////////////////////////////////////////////////////////////
 // this function determines if the current orbit PE passes close to the target landing area or if a correction burn needs to be made
@@ -538,46 +546,60 @@ return result.
 }
 
 Function hf_LandingPIDControlLoop{
-Parameter lastdt, lastLat, lastLng.
+Parameter lastdt, lastPos.
+	Set lastdt to min(TIME:SECONDS-0.01, lastdt). //Ensures there is a time difference so there is no divide by zero
+	Set DegDistance to (body:radius*2*constant:pi)/360.
+	Set Tgt to LATLNG(sv_PIDLAT:Setpoint,sv_PIDLONG:Setpoint).
+	
+	Set LatDist to hf_geoDistance(LATLNG(gl_shipLatLng:Lat,tgt:Lng),tgt). // distance to tgt in Lat metres only
+	Set LngDist to hf_geoDistance(LATLNG(tgt:Lat,gl_shipLatLng:Lng),tgt). // distance to tgt in Lng metres only
 	
 	SET ALTSpeed TO sv_PIDALT:UPDATE(TIME:SECONDS, gl_baseALTRADAR). //Get the PID on the AlT diff as desired vertical velocity
-	Set LATSpeed to sv_PIDLAT:Update(TIME:SECONDS, gl_shipLatLng:Lat).//Get the PID on the Lat diff as desired lat degrees/sec
-	Set LONGSpeed to sv_PIDLONG:UPDATE(TIME:SECONDS, gl_shipLatLng:Lng). //Get the PID on the Long diff as desired long degress/sec
+	Set LATSpeed to sv_PIDLAT:Update(TIME:SECONDS, gl_shipLatLng:Lat).//Get the PID on the Lat diff as desired lat in m/s
+	Set LONGSpeed to sv_PIDLONG:UPDATE(TIME:SECONDS, gl_shipLatLng:Lng). //Get the PID on the Long diff as desired long in m/s
 	
 	Set sv_PIDThrott:SETPOINT to ALTSpeed. // Set the ALT diff PID as the desired vertical speed
-	Set sv_PIDNorth:SETPOINT to LATSpeed.
-	Set sv_PIDEast:SETPOINT to LONGSpeed. 
+	Set sv_PIDNorth:SETPOINT to LATSpeed. // the new desired speed in m/s
+	Set sv_PIDEast:SETPOINT to LONGSpeed. // the new desired speed in m/s
 	
-	Set NorthSpeed to (gl_shipLatLng:Lat - lastLat)/(TIME:SECONDS-lastdt).
-	Set EastSpeed to (gl_shipLatLng:Lng - lastLng)/(TIME:SECONDS-lastdt).
+	Set NorthSpeed to (gl_shipLatLng:Lat - LastPos:Lat)/(TIME:SECONDS-lastdt).
+	Set EastSpeed to (gl_shipLatLng:Lng - LastPos:Lng)/(TIME:SECONDS-lastdt).
+	
+	Set Splitarr to hf_geoVelSplit (gl_shipLatLng,LastPos).
+	
+	Set NorthSpeed1 to Splitarr[0]:mag.
+	Set EastSpeed1 to Splitarr[1]:mag.
 	
 	SET ThrottSetting TO sv_PIDThrott:UPDATE(TIME:SECONDS, verticalspeed). // PID the vertical velocity with the new desired speed
 	SET NorthDirection TO sv_PIDNorth:UPDATE(TIME:SECONDS, NorthSpeed). // PID the North velocity with the new desired speed
 	SET EastDirection TO sv_PIDEast:UPDATE(TIME:SECONDS, EastSpeed). // PID the East velocity with the new desired speed
-
+	
+	
 	Set SteerDirection to UP + r(-NorthDirection,-EastDirection,180). // r(pitch, yaw, roll) set roll to zero, this will allow pitch to equal Lat(North) direction required and Yaw(East) to equal Long direction required		
+		
 	Lock Throttle to ThrottSetting.	
 	
-	Set Flight_Arr to hf_fall().
-	
-	ClearScreen.
-	Print "Moving to Landing Position".		
+	Set Flight_Arr to hf_fall().	
 	Print "===============================".
 	Print "Target Lat: " + sv_PIDLAT:Setpoint.	
 	Print "Current Lat: " + gl_shipLatLng:Lat.
-	Print "Lat diff: " + (sv_PIDLAT:Setpoint - gl_shipLatLng:Lat).		
-	Print "PIDLAT Out: " + sv_PIDLAT:OUTPUT.			
-	Print "Desired LATSpeed: " + LATSpeed.			
-	Print "Current NorthSpeed: " + NorthSpeed.
-	Print "NorthDirection: " + NorthDirection.		
+	Print "Lat diff: " + (sv_PIDLAT:Setpoint - gl_shipLatLng:Lat).	
+	Print "LATSpeed:"	+ LATSpeed.
+	Print "NorthSpeed:" + NorthSpeed.
+	Print "NorthSpeed1:" + NorthSpeed1.
+	Print "NorthDirection:" + NorthDirection.
 	Print "===============================".
 	Print "Target Long: " + sv_PIDLONG:Setpoint.		
 	Print "Current Long: " + gl_shipLatLng:Lng.
 	Print "Long diff: " + (sv_PIDLONG:Setpoint - gl_shipLatLng:Lng).
-	Print "PIDLONG Out: " + sv_PIDLONG:OUTPUT.
-	Print "Desired LONGSpeed: " + LONGSpeed.
-	Print "Current EastSpeed: " + EastSpeed.		
-	Print "EastDirection: " + EastDirection.		
+	Print "LONGSpeed:"	+ LONGSpeed.
+	Print "EastSpeed:" + EastSpeed.
+	Print "EastSpeed1:" + EastSpeed1.
+	Print "EastDirection:" + EastDirection.
+	Print "===============================".
+	//Print "Base distance:" + (gl_shipLatLng:position - tgt:position):mag.
+	Print "Calc tgt true Dist:" + hf_gs_distance(gl_shipLatLng, tgt).	
+	Print "Calc tgt Dist:" + hf_geoDistance(gl_shipLatLng, tgt).	
 	Print "===============================".	
 	Print "ALT Kp: " + sv_PIDALT:Pterm.
 	Print "ALT Ki: " + sv_PIDALT:Iterm.
@@ -591,34 +613,49 @@ Parameter lastdt, lastLat, lastLng.
 	Print "===============================".
 	//Print "Delta throttle: "+ dThrot.
 	Print "Throttle Setting: "+ ThrottSetting.
-	Print "Alt" + ship:Altitude.
+	Print "Current Alt" + ship:Altitude.
 	Print "Ground Alt" + gl_surfaceElevation.
-	Print "Radar" + gl_baseALTRADAR.
-	Print "Heading: " + ship:heading.
-	Print "Bearing: " + ship:bearing.
-	Print "True Bearing: " + hf_gs_bearing(gl_shipLatLng,gl_NORTHPOLE).
+	Print "Ground Dist" + gl_baseALTRADAR.
+	Print "tgt Bearing :" + tgt:bearing.
+	Print "Calc tgt Bearing:" + hf_geoDir(gl_shipLatLng, tgt).
+	Print "Calc True tgt Bearing: " + hf_gs_bearing(gl_shipLatLng,tgt).
+	Print "tgt Heading :" + tgt:heading.
 	Print "===============================".
 	Print "Base fall time: " + sqrt((2*gl_baseALTRADAR)/(gl_GRAV["G"])).
 	Print "Fall time: " + Flight_Arr["fallTime"].	
 	Print "Fall vel: " + Flight_Arr["fallVel"].
-
+	Print "===============================".
 	
-	Set lastLat to gl_shipLatLng:Lat.
-	Set lastLng to gl_shipLatLng:Lng.
+	Set lastPos to gl_shipLatLng.
 	Set lastdt to TIME:SECONDS.
+	
 	Local Result is lexicon().
-	Result:add("lastLat",lastLat).
-	Result:add("lastLng",lastLng).
+	
+	Result:add("lastPos",lastPos).
 	Result:add("lastdt",lastdt).
+	
 	Return Result.
 }
 
-
-
 //////////////////////////////////////////////////////////
 //// These are from others code and needs to be checked for reduncancy or if they can be used
+function hf_geoVelSplit{
 
+//Credits: https://www.reddit.com/r/Kos/comments/438e1o/converting_latitudelongitude_to_distance_in_meters/
+Parameter LatLng1, LatLng2.
+	Set pos1 to LatLng1:position.
+	Set pos2 to LatLng2:position.
+	set distance to (pos1-pos2):mag.
 
+	set north_vector to heading(0,0):vector.
+	set east_vector to heading(90,0):vector.
+
+	set vel_lat to vxcl(vcrs(SHIP:UP:VECTOR,north_vector), SHIP:velocity:surface).
+	set vel_lng to vxcl(vcrs(SHIP:UP:VECTOR,east_vector), SHIP:velocity:surface).
+	
+	Return list(vel_lat, vel_lng).
+
+}
 
 function hf_geoDistance { //Approx in meters
 	parameter geo1.

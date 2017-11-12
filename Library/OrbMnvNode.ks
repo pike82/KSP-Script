@@ -18,7 +18,7 @@ local Util_Engine is import("Util_Engine").
 ////////////////////////////////////////////////////////////////
 //File Functions
 ////////////////////////////////////////////////////////////////
-Credits: Own (i.e. runmode file capture) and http://youtube.com/gisikw
+//Credits: Own (i.e. runmode file capture) and http://youtube.com/gisikw
 //Note: A shut down engine(inactivated) will not allow this function to work
 function ff_Node_exec { // this function executes the node when ship has one
 // used to determine if the node exceution started and needs to return to this point.
@@ -68,7 +68,7 @@ parameter autowarp is 0, Alrm is True, n is nextnode, v is n:burnvector, startti
 }/// End Function
 
 ///////////////////////////////////////////////////////////////////////////////////	
-Credits: Own
+//Credits: Own
 
 function ff_user_Node_exec {
 	Clearscreen.
