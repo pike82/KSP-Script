@@ -1,7 +1,7 @@
 Print ("Intilising other CPU's").
 
 Print "Old Config:IPU Setting:" + Config:IPU.
-Set Config:IPU to 1500.// this needs to be set based on the maximum number of processes happening at once, usually 500 is enought unless its going to be a very heavy script such as a suicide landing script which will require 1500
+Set Config:IPU to 1000.// this needs to be set based on the maximum number of processes happening at once, usually 500 is enought unless its going to be a very heavy script such as a suicide landing script which may require upto 1500
 Print "New Config:IPU Setting:" + Config:IPU.
 Set Config:Stat to false.
 	
@@ -39,10 +39,7 @@ for Processor in ALL_PROCESSORS {
 PRINT ("Downloading libraries").
 //download dependant libraries first
 	local Util_Vessel is import("Util_Vessel").
-	local Launch is import("Launch_atm").
 	local Util_Launch is import("Util_Launch").
-	local OrbMnvs is import("OrbMnvs").
-	local OrbRv is import("OrbRv").
 	local Landing_vac is import("Landing_vac").
 	
 	
@@ -55,16 +52,22 @@ Function Mission_runModes{
 	if runMode["runMode"] = 0.1 { 
 		Print "Run mode is:" + runMode["runMode"].
 		Stage.
-		Wait 60. //allow hyperedit
-		Landing_vac["CABLand"]().
-		gf_set_runmode("runMode",6.1).
+		Wait 45. //allow hyperedit
+		Landing_vac["BestLand"]().
+		gf_set_runmode("runMode",1.1).
 	}	
 
-	// else if runMode["runMode"] = 5.1 { 
-		// Print "Run mode is:" + runMode["runMode"].
-		// Landing_vac["CAB"]().
-		// gf_set_runmode("runMode",6.1).
-	// }	
+	else if runMode["runMode"] = 1.1 { 
+		Print "Run mode is:" + runMode["runMode"].
+		Landing_vac["SuBurn"]().
+		gf_set_runmode("runMode",2.1).
+	}	
+	
+	else if runMode["runMode"] = 2.1 { 
+		Print "Run mode is:" + runMode["runMode"].
+		Landing_vac["HoverLand"]().
+		gf_set_runmode("runMode",3.1).
+	}	
 	
 } /// end of function runmodes
 
@@ -94,24 +97,30 @@ Function intParameters {
 	//////////////////////////////////////////
 	///Ship PID Control variables//////////////////
 	/////////////////////////////////////////
-	Lock gl_DegDistance to (body:radius*2*constant:pi)/360.
+	
 //===ALTITUDE====
 	//Desired vertical speed
-	Set sv_PIDALT to PIDLOOP(0.9, 0.0, 0.0005, -10, 10).//SET PID TO PIDLOOP(KP, KI, KD, MINOUTPUT, MAXOUTPUT).	
+	Set sv_PIDALT to PIDLOOP(0.9, 0.0, 0.0005, -5, 10).//SET PID TO PIDLOOP(KP, KI, KD, MINOUTPUT, MAXOUTPUT).	
 	//Desired throttle setting
-	Set sv_PIDThrott to PIDLOOP(0.1, 0.2, 0.005, 0, 1).//SET PID TO PIDLOOP(KP, KI, KD, MINOUTPUT, MAXOUTPUT).	
+	Set sv_PIDThrott to PIDLOOP(0.1, 0.2, 0.005, 0.05, 1).//SET PID TO PIDLOOP(KP, KI, KD, MINOUTPUT, MAXOUTPUT).	
 
 //===LATITUDE (North) ====
 	//Desired velocity
-	Set sv_PIDLAT to PIDLOOP(100.0, 0.0, 5.0, 5/gl_DegDistance, -5/gl_DegDistance).//SET PID TO PIDLOOP(KP, KI, KD, MINOUTPUT, MAXOUTPUT).	
+	Set sv_PIDLAT to PIDLOOP(1, 0.0, 5, -0.005, 0.005).//SET PID TO PIDLOOP(KP, KI, KD, MINOUTPUT, MAXOUTPUT).	
 	//Desired direction
-	Set sv_PIDNorth to PIDLOOP(10000, 0, 0, -22.5, 22.5).// SET PID TO PIDLOOP(KP, KI, KD, MINOUTPUT, MAXOUTPUT).	
+	Set sv_PIDNorth to PIDLOOP(5000, 0, 2000, -2.5, 2.5).// SET PID TO PIDLOOP(KP, KI, KD, MINOUTPUT, MAXOUTPUT).	
 
 //===LONGITUDE (East)====
 	//Desired velocity
-	Set sv_PIDLONG to PIDLOOP(50, 0, 2.5, -5/gl_DegDistance, 5/gl_DegDistance).// SET PID TO PIDLOOP(KP, KI, KD, MINOUTPUT, MAXOUTPUT).			
+	Set sv_PIDLONG to PIDLOOP(1, 0, 5, -0.005, 0.005).// SET PID TO PIDLOOP(KP, KI, KD, MINOUTPUT, MAXOUTPUT).			
 	//Desired direction	 
-	Set sv_PIDEast to PIDLOOP(10000, 0, 0, -22.5, 22.5).//SET PID TO PIDLOOP(KP, KI, KD, MINOUTPUT, MAXOUTPUT).	
+	Set sv_PIDEast to PIDLOOP(5000, 0, 2000, -2.5, 2.5).//SET PID TO PIDLOOP(KP, KI, KD, MINOUTPUT, MAXOUTPUT).	
+
+//===Direction ====
+	//Desired velocity
+	Set sv_PIDDIST to PIDLOOP(0.1, 0, 0.5, -2, 2).// SET PID TO PIDLOOP(KP, KI, KD, MINOUTPUT, MAXOUTPUT).			
+	//Desired direction	 
+	Set sv_PIDDIR to PIDLOOP(1.5, 0, 0, -2.5, 2.5).//SET PID TO PIDLOOP(KP, KI, KD, MINOUTPUT, MAXOUTPUT).	
 	
 	
 	///////////////////////
