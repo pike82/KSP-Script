@@ -205,7 +205,7 @@ function ff_mdot {
 	  set engine_count to engine_count + 1.
 	}
 	set isp to isp / engine_count.
-	set thrust to thrust * 1000. // Engine Thrust (kg * m/s²)
+	set thrust to thrust* 1000.// Engine Thrust (kg * m/s²)
 	return (thrust/(g * isp)). //kg of change
 }/// End Function
 	
@@ -224,7 +224,6 @@ function ff_Vel_Exhaust {
 	  set engine_count to engine_count + 1.
 	}
 	set isp to isp / engine_count.
-	//set thrust to thrust. // Engine Thrust (kg * m/s²)
 	return g *isp.///thrust). //
 }/// End Function
 	

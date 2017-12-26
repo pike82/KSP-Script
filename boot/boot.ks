@@ -11,7 +11,9 @@
 @LAZYGLOBAL OFF. //Turns off auto global call of parameters and prevents verbose errors where calling recursive functions
 
 WAIT 5. //ensures all game physiscs have loaded
-SET SHIP:CONTROL:PILOTMAINTHROTTLE TO 0. // ensures no active throttle unless specified later
+gf_stopWarp(). //ensure there is no warping occuring
+gf_killthrottle(). // ensures no active throttle unless specified later
+
 // open up the KOS terminal
 
 CORE:PART:GETMODULE("kOSProcessor"):DOEVENT("Open Terminal").
@@ -29,17 +31,23 @@ Local bootLast is TIME:SECONDS. // boot last is used to clear the cache to force
 Global runMode is Lexicon().//boot file initialisation of runMode parameter which is used to call/select file functions
 runMode:add("runMode", 0.1).
 
+Global Set gV_log_file to "0:/log/" + gf_txtSpace_Rep(SHIP:NAME) + ".txt".
+  doLog(SHIP:NAME).
+  IF lf <> "" { pOut("Log file: " + LOG_FILE). }
+}
+
 ////////////////////////////////////////////////////////////////////
 
 // Recover bootLast from file or use default
 if exists (BootLast.ks) {
 	runpath (BootLast.ks).
-	Print "BootLast set to: " + BootLast.
+	Print "BootLast time exists and set to: " + BootLast.
 } 
 else {
 	gf_set_BootCache(TIME:SECONDS). // create the bootlast file
+	Print "BootLast time created and set to:" + BootLast.
 }
-Print "BootLast Initial:" + BootLast. // debug of the current Bootlast time
+
 
 If bootLast < TIME:SECONDS - 30{
 	/// the CPU has not been rebooted for a while and likley needs to have the cache cleared
@@ -143,7 +151,6 @@ parameter key.
 	Print "Runmode " + key + " Removed".
 }
 
-
 // Persist bootlast to disk
 function gf_set_BootCache { // use quotations if you want to use string runmode names
 parameter BootCache.
@@ -224,6 +231,58 @@ PARAMETER filePath, name, newName.
 } //End of Function Download
  
 //////////////////////////////////////////////////////
+ 
+ FUNCTION gf_stopWarp
+{
+  KUNIVERSE:TIMEWARP:CANCELWARP().
+  WAIT UNTIL SHIP:UNPACKED.
+}
+ 
+ //////////////////////////////////////////////////////
+ 
+ FUNCTION gf_killthrottle
+{
+  LOCK THROTTLE TO 0.
+  SET SHIP:CONTROL:PILOTMAINTHROTTLE TO 0.
+}
+ 
+ //////////////////////////////////////////////////////
+ 
+ FUNCTION gf_txtSpace_Rep // used to insert an underscore into a file name instead of a space
+{
+  PARAMETER txt, l is 0, s is "_".
+  RETURN (""+txt):PADLEFT(l):REPLACE(" ",s).
+}
+
+ ////////////////////////////////////////////////////// 
+ 
+ FUNCTION gf_PrintLog
+{
+  PARAMETER txt, timForm is true.
+  
+	IF timForm { 
+		SET txt TO gf_formatMET() + " " + txt. 
+	}
+  
+	IF gV_log_file <> "" { 
+		LOG txt TO gV_log_file. 
+	}
+}
+
+FUNCTION gf_formatMET
+{
+  LOCAL m_time is Round(MISSIONTIME).
+    return gf_formatTS(TIME:SECONDS - m_time).
+}
+
+FUNCTION gf_formatTS
+{
+  PARAMETER u_time1, u_time2 IS TIME:SECONDS.
+  LOCAL ts is (TIME - TIME:SECONDS) + ABS(u_time1 - u_time2).
+  RETURN "[T+" + gf_txtSpace_Rep(ts:YEAR - 1, 2,"0") + " " + gf_txtSpace_Rep(ts:DAY - 1, 3,"0",) + " " + ts:CLOCK + "]".
+}
+
+ ////////////////////////////////////////////////////// 
  
  // Initialisation of global variables for the graphical user interface display
  // Global gv_gui_Status is 0.

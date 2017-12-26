@@ -17,6 +17,7 @@ local Hill_Climb is import("Hill_Climb").
 		"Find_AN_INFO", ff_Find_AN_INFO@,
 		"Find_AN_UT", ff_Find_AN_UT@,
 		"TAr", ff_TAr@,
+		"timeFromTA", ff_timeFromTA@,  
 		"TAtimeFromPE", ff_TAtimeFromPE@,
 		"quadraticMinus", ff_quadraticMinus@,
 		"quadraticPlus", ff_quadraticPlus@,
@@ -161,6 +162,21 @@ function ff_TAr {
 	
 }
 
+function ff_timeFromTA {
+//TODO: Check this code work for all positions and cases need to check if TA time from PE returns only in one direction or swaps times once 180 degrees has been reached.
+
+	parameter TA, ecc. // True anomoly (must be in radians), eccentricity.
+	Local timetoPer is ff_TAtimeFromPE (TA, ecc).
+	If (ETA:periapsis + timetoPer) - Ship:orbit:Period > 0{ // we know we will get to the TA before the PE.
+		local TA_time is (ETA:periapsis + timetoPer) - Ship:orbit:Period.
+	}
+	Else {  // we know we will get to the PE before the TA.
+		local TA_time is (ETA:periapsis + timetoPer).
+	}
+	
+	return TA_time. //TA time from PE in seconds
+}
+
 function ff_TAtimeFromPE {
 	parameter TA, ecc. // True anomoly (must be in radians), eccentricity.
 	local EA is ff_EccAnom(ecc, TA).
@@ -169,7 +185,7 @@ function ff_TAtimeFromPE {
 	Print "MA:" + MA.
 	local TA_time is MA/(2*constant:pi/Ship:orbit:Period).
 	//Print "TA Time From PE:" + TA_time.
-	return TA_time. //TA time from PE in seconds
+	return TA_time. //TA time from PE in seconds, Range from 0 to Ship:Orbital period
 }
 
 function ff_quadraticMinus {
@@ -291,7 +307,6 @@ function ff_OrbitSplitVel{
 	arr:add ("Vert_V", verticalV).
 	Return (arr).
 }
-
 
 ////////////////////////////////////////////////////////////////
 //Helper Functions

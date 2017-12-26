@@ -1,6 +1,7 @@
 Boot File 
 	- This provides Uplink and connection control. 
 	- This handles the movement between runmodes and Persistant keys within the runmodes file.
+	- This contains some golbal functions which provides logging information to a log file for debugging
 
 knu	- handles all function calls between libaries and the mission file.
 
@@ -10,6 +11,8 @@ LIBRARIES
 General prefix rules:
 gl_ - "Global lock" A global lock variable specified in the mission file which is to be used accorss all functions.
 sv_ - "Ship Variable" A global ship specific variable specified in the mission file which is to be used accorss all functions.
+gf_ - "Global Function" often at the Boot file or mission file level which is intended to be used across all files
+gv_ - "Global Variable" often at the Boot file or mission file level which is intended to be used across all files
 ff_ - "file function" A function which intended to be called upon and give a result to an external function outside the file.
 hf_ - "helper function" A function which intended to be called upon and give a result internally to the file.
 
@@ -54,10 +57,21 @@ Landing_Atm (Work in Progress) - Handles landing on a body with an atmosphere.
  
  
 Landing_Vac (Current Work in Progress) - Handles landing on an airless body.
+			-	"SuBurn" this function will perform a suicide burn purely vertical with a defined safe height. note: it will not cancell out any horizontal velocity.
+			
+			-	"CAB" (Work In progress) this function will perform a constant altidue burn based on the PE of the orbit. TODO: have it do a CAB based on a predefined time or location.
+			
+			-	"BestLand" this function combines the CAB and Suicide burn by burning purly horizontal until the craft approaches where it requires a suicide burn. At that point the craft will rotate to prevent passing the suicide burn distance but still maintain the horizontal burn until the horizontal velocity has been stopped.
+			
+			-	"HoverLand" this function hovers at a set altitude to a location, settles over the location and then make a controlled descent to land at that location.
+			
+			-	"LandingPointSetup" (work in progess which needs to be confirmed and allow for slow rotating bodies or orbits which cant meet criteria)
+			
+			
 
 Launch_Vac	(To Be Developed) - Handles launches from an airless body. 
 
-Launch_Atm	- Handles Launches in an Atmosphere.
+Launch_Atm	- Handels Launches in an Atmosphere.
 
 			-	"preLaunch" allows the craft to stabilise and enige parameters to be set.
 			
@@ -124,14 +138,11 @@ Util_Landing (Work in Progress and credits as required)	- Calculates details abo
 
 Util_Launch	- Calculates Launch Details.
 	
-			-	"LaunchAzimuth"
+			-	"LaunchAzimuth" finds the correct azimuth to launch to a specific inclination
 			
-			-	"launchwindow"
+			-	"launchwindow" warps to the next launch window which launches into a specfic inclination.
 			
-			-	"FlightAzimuth"
-
-
-
+			-	"FlightAzimuth" finds the best azimuth in flight to meet a specific inclinations
 
 Launch Calc
 	- Calculates the launch window and direction required for all craft.
@@ -145,6 +156,9 @@ Util_Orbit
 Util_Vessel
 	- Calculate Details about the current vessel and the onboard systems.
 
+
+########################################################################################
+Helper function list and location of functions
 
 
 

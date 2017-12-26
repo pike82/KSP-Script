@@ -24,9 +24,72 @@ local Util_Orbit is import("Util_Orbit").
 
 //TODO: look at the KOS-Stuff_master manu file for possible ideas on reducing and bettering the AN code and manervering code.
 
-//Ideas:
 
-//look-into hohmann transfers where can use position at(orbit,time) to determine where a body will be and then make a manuver to meet it at the same time intead of purely node iterations through hill climb.
+FUNCTION ff_Hohmann{
+
+//Credit:https://github.com/ElWanderer/kOS_scripts and wiki
+
+//TODO:look-into hohmann transfers where can use position at(orbit,time) to determine where a body will be and then make a manuver to meet it at the same time intead of purely node iterations through hill climb.
+
+// Note this assumes a relatively circular oribit for both the Ship and the target.
+
+PARAMETER tgt, Curr_time, t_pe is 0, inc_tgt is 0.
+
+	LOCAL Ship_Orbit is ORBITAT(SHIP,Curr_time). //ORBITAT(orbitable,time) is KOS in-built function
+	LOCAL tgt_Orbit is ORBITAT(tgt,Curr_time).
+	LOCAL Ship_Bod is Ship:BODY.
+	LOCAL r1 is Ship_Orbit:SEMIMAJORAXIS.
+	LOCAL r2 is tgt_Orbit:SEMIMAJORAXIS + t_pe.
+		
+	LOCAL dvDepart is SQRT(Ship_Bod:MU/r1) * (SQRT((2*r2)/(r1+r2)) -1). // wiki Dv1 Equation
+	LOCAL dvArrive is SQRT(Ship_Bod:MU/r1) * (1- SQRT((2*r2)/(r1+r2))). // wiki Dv2 Equation
+	
+	if r2 < r1 { 
+		SET dvDepart TO -dvDepart. // this allows for transfers to a lower orbit
+		SET dvArrive TO -dvArrive.
+	}
+	
+	local dv is dvDepart + dvArrive.
+
+	LOCAL Trans_time is CONSTANT:PI * SQRT( ((r1+r2)^3) / (8 * b:MU) ). // wiki transfer orbit time Equation
+	
+	LOCAL Tgt_travel_ang is (Trans_time  * 360 / tgt_Orbit:PERIOD). // the angle the tgt moves during the transist assuming a circular orbit
+	LOCAL desired_phi is 180 - Tgt_travel_ang. // we want to meet the target at apoapsis so the target neet to travel and end 180 degrees from where we start.
+
+	LOCAL rel_ang_Change is (360 / Ship_Orbit:PERIOD) - (360 / tgt_Orbit:PERIOD). // the degrees the tgt moves each orbit by the ship.
+
+	LOCAL ship_pos is positionat(SHIP, Curr_time). //current position of the ship
+	LOCAL tgt_pos is positionat(tgt, Curr_time). //current position of the target
+	
+	LOCAL start_phi is VANG(ship_pos,tgt_pos). // the current angle between the ship and the tgt.
+	
+	LOCAL ship_normal IS VCRS(velAt(SHIP,curr_time),ship_pos).// the plane of the ship
+	LOCAL ship_tgt_cross IS VCRS(ship_pos,tgt_pos).//// plane of the transfer (ie. incination diference)
+
+	if VDOT(ship_normal, ship_tgt_cross) > 0 { 
+		SET start_phi TO 360 - start_phi. 
+	} // this checks to see if the planes are pointed in the same direction or are pointed opposite to one another so it is known if ship is leading or lagging the tgt. 
+
+	LOCAL phi_delta is mAngle(start_phi - desired_phi). //this determines how far off the best phase angle is.
+	
+	//TODO:mAngle needs to be made into a standard orbit utility function
+	
+	if rel_ang_Change < 0 { 
+		SET phi_delta TO phi_delta - 360. //adjust for negative angle change values
+	}
+	
+	LOCAL first_est is NODE(u_time + (phi_delta / rel_ang_Change), 0, 0, dv). // this creates the node (best refined by a hill climb) which can be used to gain a good first approximation of the time required to speed up the solution.
+	
+	if runMode:haskey("ff_Node_exec") {
+		OrbMnvNode["Node_exec"](int_Warp).		
+	} //end runModehaskey if
+	Else{	
+		hf_seek_SOI(tgt, t_pe, inc_tgt, dv*1.2, u_time + (phi_delta / rel_ang_Change), 0, 0, dv).
+		OrbMnvNode["Node_exec"](int_Warp).
+	} //end else
+
+	return final_node.
+}
 
 Function ff_BodyTransfer {	
 Parameter target_Body, Target_Perapsis, maxDV is 1000, IncTar is 90, int_Warp is False. // note the target name does not need to be sourrounded by quotations
@@ -76,12 +139,13 @@ Function ff_CraftTransfer {
 	  
 function hf_seek_SOI {
 	parameter target_body, target_periapsis, IncTar, maxDV,
-		  start_time is time:seconds + 600. 
+		  start_time is time:seconds + 600, r is 0, n is 0, p is 0. 
 	local data is Hill_Climb["Seek"] (
-		start_time, 0, 0, 0, 
+		start_time, r, n, p, 
 		{  
 		parameter mnv.
 		if hf_transfers_to(mnv:orbit, target_body) return 1.
+		//TODO: put in inorge capability using "target_orbit:hasnextpatch and target_orbit:nextpatch:body <> target_body" so that it will ignore/is sceptical of results which use another body for a gravity assist as boundary cases around this can affect the hill climb results.
 		return -hf_closest_approach
 			(
 			target_body,

@@ -39,9 +39,13 @@ PARAMETER targetInclination, targetAltitude.
 	IF targetInclination < 0 {
 		SET azimuth TO 180-azimuth.
 	} //Normalises to a launch in the direction of body rotation
-	PRINT ("Lanuch Azimuth:" + azimuth).    
+	PRINT ("Launch Azimuth:" + azimuth).    
 	RETURN azimuth.   
 } // End of Function
+
+
+
+/////////////////////////////////////////////////////////////////////////////////////
 
 //Credits: // https://github.com/KK4TEE/kOSPrecisionLand
 // This function calculates the direction a ship must travel to achieve the
@@ -51,7 +55,6 @@ PARAMETER targetInclination, targetAltitude.
 // instead of the ideal circular orbit velocity - this allows insertion into
 // elliptical orbits.
 
-/////////////////////////////////////////////////////////////////////////////////////
 
 function ff_FlightAzimuth {
 	parameter inc. // target inclination
@@ -87,8 +90,7 @@ function ff_FlightAzimuth {
 // Source: https://github.com/TheBassist95/Kos-Stuff
 
 function ff_launchwindow{
-Parameter target.
-Parameter ascendLongDiff is 0.2.
+Parameter target , ascendLongDiff is 0.2.
 
 	local IncPoss is true.
 	//  Lock the angle difference to the solar prime  
@@ -99,6 +101,8 @@ Parameter ascendLongDiff is 0.2.
 		set shiplon to abs(longitude).
 	else
 		set shiplon to 360-longitude.
+	
+	//TODO: there is a similar function in the Landing_vac librabry, look to intergrate.
 	
 	if target:orbit:inclination < abs(latitude) { //If the inclination of the target is less than the lattidue of the ship it will not pass over the site as the max latitude of its path is too low.
 		set IncPoss to False.
