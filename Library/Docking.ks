@@ -17,7 +17,7 @@
 //File Functions
 ////////////////////////////////////////////////////////////////
 
-Credits: http://youtube.com/gisikw
+//Credits: http://youtube.com/gisikw
 
 //TODO: work out why the exclusion function is not working correctly
 //TODO: Test Main engine components of the function.
@@ -65,7 +65,7 @@ Credits: http://youtube.com/gisikw
 	}// End Function
 	
 ///////////////////////////////////////////////////////////////////////////////////	
-Credits: Own
+//Credits: Own
 	
 	FUNCTION ff_undock {
 	PARAMETER dockingPortTag, targetPortTag, targetName, Safe_dist is 150.
@@ -84,7 +84,7 @@ Credits: Own
 ///////////////////////////////////////////////////////////////////////////////////
 //Helper Functions
 /////////////////////////////////////////////////////////////////////////////////////
-Credits: http://youtube.com/gisikw
+//Credits: http://youtube.com/gisikw
 
 	FUNCTION hf_dok_get_port {
 	Print "Getting port".
@@ -119,7 +119,7 @@ Credits: http://youtube.com/gisikw
 	}// End Function
 	
 ///////////////////////////////////////////////////////////////////////////////////	
-Credits: http://youtube.com/gisikw	
+//Credits: http://youtube.com/gisikw	
 	
 	FUNCTION hf_dok_ensure_range {
 	PARAMETER targetVessel, dockingPort, distance, speed.
@@ -138,7 +138,7 @@ Credits: http://youtube.com/gisikw
 	}// End Function
 	
 ///////////////////////////////////////////////////////////////////////////////////
-Credits: http://youtube.com/gisikw
+//Credits: http://youtube.com/gisikw
 	
 	FUNCTION hf_dok_translate { // move the ship in the direction of the vector inputed as a parameter
 	PARAMETER vector.
@@ -154,7 +154,7 @@ Credits: http://youtube.com/gisikw
 	}// End Function
 	
 ///////////////////////////////////////////////////////////////////////////////////
-Credits: http://youtube.com/gisikw	
+//Credits: http://youtube.com/gisikw	
 	FUNCTION hf_dok_kill_relative_velocity {
 	PARAMETER targetPort, speed.
 
@@ -166,7 +166,7 @@ Credits: http://youtube.com/gisikw
 	}// End Function
 	
 ///////////////////////////////////////////////////////////////////////////////////
-Credits: Own with ideas from http://youtube.com/gisikw
+//Credits: Own with ideas from http://youtube.com/gisikw
 
 	FUNCTION hf_dok_sideswipe {
 	PARAMETER targetPort, dockingPort, Safe_distance, distance, speed, Step_Time.
@@ -321,7 +321,7 @@ Credits: Own with ideas from http://youtube.com/gisikw
 	} // End of dok_sideswipe function
 	
 ///////////////////////////////////////////////////////////////////////////////////
-Credits: Own
+//Credits: Own
 	
 	FUNCTION hf_dok_Exclusion_test {
 	PARAMETER distance, Centre_node_vec, test_Vector.
@@ -340,7 +340,7 @@ Credits: Own
 	}// End Function
 	
 ///////////////////////////////////////////////////////////////////////////////////
-Credits: Own
+//Credits: Own
 	
 	FUNCTION hf_dok_Exclusion_Ang {
 	PARAMETER distance, Centre_node_vec, test_Vector.
@@ -351,7 +351,7 @@ Credits: Own
 	}// End Function
 	
 ///////////////////////////////////////////////////////////////////////////////////
-Credits: http://youtube.com/gisikw	
+//Credits: http://youtube.com/gisikw	
 	FUNCTION hf_dok_approach_port {
 	PARAMETER targetPort, dockingPort, distance, speed.
 

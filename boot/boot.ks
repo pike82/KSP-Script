@@ -8,7 +8,7 @@
 //Checking for and downloading new and updated mission file(s)
 //Handling on screen notification messages
 
-@LAZYGLOBAL OFF. //Turns off auto global call of parameters and prevents verbose errors where calling recursive functions
+//@LAZYGLOBAL OFF. //Turns off auto global call of parameters and prevents verbose errors where calling recursive functions
 
 WAIT 5. //ensures all game physiscs have loaded
 gf_stopWarp(). //ensure there is no warping occuring
@@ -18,10 +18,9 @@ gf_killthrottle(). // ensures no active throttle unless specified later
 
 CORE:PART:GETMODULE("kOSProcessor"):DOEVENT("Open Terminal").
 SET TERMINAL:HEIGHT TO 65.
-SET TERMINAL:WIDTH TO 35.
+SET TERMINAL:WIDTH TO 55.
 SET TERMINAL:BRIGHTNESS TO 0.8.
-SET TERMINAL:CHARHEIGHT TO 8.
-SET TERMINAL:CHARWIDTH TO 6.
+SET TERMINAL:CHARHEIGHT TO 10.
 
 /////////////////////////////////////////
 // THE ACTUAL SHIP BOOTUP PROCESS
@@ -31,10 +30,8 @@ Local bootLast is TIME:SECONDS. // boot last is used to clear the cache to force
 Global runMode is Lexicon().//boot file initialisation of runMode parameter which is used to call/select file functions
 runMode:add("runMode", 0.1).
 
-Global Set gV_log_file to "0:/log/" + gf_txtSpace_Rep(SHIP:NAME) + ".txt".
-  doLog(SHIP:NAME).
-  IF lf <> "" { pOut("Log file: " + LOG_FILE). }
-}
+Global gV_log_file is "0:/log/" + gf_txtSpace_Rep(SHIP:NAME) + ".txt".
+gf_PrintLog(SHIP:NAME).
 
 ////////////////////////////////////////////////////////////////////
 
@@ -59,6 +56,14 @@ If bootLast < TIME:SECONDS - 30{
 
 ////////////////////////////////////////////////////////////////////
 
+//Determine if want to use ks or ksm files
+Switch to 0.
+Set ext to ".ksm".
+if ext = ".ksm"{
+	runpath ("0:/Log/Compile.ks").
+}
+Switch to 1.
+
 // Recover runmode from file or use default
 if exists (state.ks) {
 	runpath (state.ks).
@@ -78,26 +83,26 @@ ON AG10 {
 
 //Mission Files set up
 Print "Getting Missions Names".
-LOCAL newMission TO SHIP:NAME + ".mission.ks".
-LOCAL newUpdate TO SHIP:NAME + ".update.ks".
+LOCAL newMission TO SHIP:NAME + ".mission"+ ext.
+LOCAL newUpdate TO SHIP:NAME + ".update"+ ext.
   
 // Check connection and ensure a mission file and Knu file is present in the first boot up.
 IF ADDONS:RT:HASCONNECTION(SHIP) or ADDONS:RT:HASLOCALCONTROL(SHIP) or ADDONS:AVAILABLE("RT")=False {  //See if there is a connection
 	Print ("==INITIALISATION FILE CHECKS==").
 	Print ("Checking for knu file").
-	If not exists (knu.ks){
-		gf_DOWNLOAD ("0:/Library/","knu.ks","knu.ks").
+	If not exists ("knu" + ext){
+		gf_DOWNLOAD ("0:/Library/","knu"+ ext,"knu"+ ext).
 	}
 	Print ("Checking for mission file").
 	gf_checkUpdate().
-	If not exists (Mission.ks) {
-		gf_Download("0:/Missions/",newMission,"Mission.KS").
+	If not exists ("Mission"+ ext) {
+		gf_Download("0:/Missions/",newMission,"Mission"+ ext).
 	}
 }
 
 //Ensure Knu and mission file loaded, especially after a reboot
-RUNONCEPATH (knu.ks).
-RUNONCEPATH (Mission.ks).
+RUNONCEPATH ("1:/knu"+ ext).
+RUNONCEPATH ("1:/Mission"+ ext).
 
 
 Local bootTime To TIME:SECONDS.
@@ -108,7 +113,7 @@ Print ("==COMMENCING RUNMODE LOOP==").
 until runMode["runMode"] = -1 {
 	//Print ("Run mode boot loop").
     //if a mission file exisits run it
-	If exists (mission.ks){
+	If exists ("mission"+ ext){
 		Print "Mission Exists, Starting runmode".
 		Mission_runModes(). // run the mission runmodes function in the mission file
 		Print "Runmode: " + Runmode:Values.
@@ -173,7 +178,7 @@ Function gf_checkUpdate {
 		//ELSE {
 			IF EXISTS("0:/updateQ/" + newUpdate) {  //If a mission file exisits download and overwirte the current mission file
 				PRINT "Update Exists, loading update".
-				gf_UPDATEQ("0:/updateQ/", newUpdate, "mission.ks").
+				gf_UPDATEQ("0:/updateQ/", newUpdate, "mission"+ ext).
 				wait 0.2.
 				// Switch to 1.
 				// RUNONCEPATH (mission.ks).
@@ -191,15 +196,15 @@ PARAMETER filePath, name, newName.
    
    PRINT (filePath+name).
    IF EXISTS (filePath+name) {
-         PRINT ("1:/" + newName).
-         IF EXISTS("1:/" + newName) {
-               DELETEPATH ("1:/" + newName). // allows mission files to be overwritten
-			   Print "Deleting existing file".
-          }
-		  COPYPATH (filePath+name, "1:/" + newName). // creates new file with file name on local volume
-		  DELETEPATH (filePath+name). // Removes file from KSC so it is no longer Q'd
-		  RUNPATH (newName). //Runs new file downloaded
-		  Print("Update Completed").
+        PRINT ("1:/" + newName).
+        IF EXISTS("1:/" + newName) {
+            DELETEPATH ("1:/" + newName). // allows mission files to be overwritten
+			Print "Deleting existing file".
+        }
+        COPYPATH (filePath+name, "1:/" + newName). // creates new file with file name on local volume
+		DELETEPATH (filePath+name). // Removes file from KSC so it is no longer Q'd
+		RUNPATH (newName). //Runs new file downloaded
+		Print("Update Completed").
     } // End of if filepath + name     
    ELSE { 
 		Print "Update file not found".
@@ -215,15 +220,18 @@ PARAMETER filePath, name, newName.
    Print ("Download of " + name + " Commencing").
    PRINT (filePath+name).
    IF EXISTS (filePath+name) {
-         PRINT ("1:/" + newName).
-         IF EXISTS("1:/" + newName) {
-               DELETEPATH ("1:/" + newName). // if name existis allow file to be overwritten
-          }
-         ELSE  {
-              COPYPATH (filePath+name, "1:/" + newName). // creates new file with file name on local volume
-              RUNPATH (newName). //Runs new file downloaded
-              Print "New File Downloaded".
-         } //End of Else
+        PRINT ("1:/" + newName).
+        IF EXISTS("1:/" + newName) {
+            DELETEPATH ("1:/" + newName). // if name existis allow file to be overwritten
+        }
+        ELSE  {
+            COPYPATH (filePath+name, "1:/" + newName). // creates new file with file name on local volume
+            RUNPATH (newName). //Runs new file downloaded
+            Print "New File "+ newName +" Downloaded".
+			Print "CPU Space Capacity: " + core:currentvolume:Capacity.
+			Print "Free CPU Space: " + core:currentvolume:FreeSpace.
+			Print "CPU Power Drain: " + core:currentvolume:Powerrequirement.
+        } //End of Else
     } // End of if filepath + name     
    ELSE { 
 		Print "Download file not found".
@@ -279,7 +287,7 @@ FUNCTION gf_formatTS
 {
   PARAMETER u_time1, u_time2 IS TIME:SECONDS.
   LOCAL ts is (TIME - TIME:SECONDS) + ABS(u_time1 - u_time2).
-  RETURN "[T+" + gf_txtSpace_Rep(ts:YEAR - 1, 2,"0") + " " + gf_txtSpace_Rep(ts:DAY - 1, 3,"0",) + " " + ts:CLOCK + "]".
+  RETURN "[T+" + gf_txtSpace_Rep(ts:YEAR - 1, 2,"0") + " " + gf_txtSpace_Rep(ts:DAY - 1, 3,"0") + " " + ts:CLOCK + "]".
 }
 
  ////////////////////////////////////////////////////// 

@@ -8,7 +8,6 @@
 
 
 ///// Download Dependant libraies
-local Util_Engine is import("Util_Engine").
 local Flight is import("Flight").
 local Util_Vessel is import("Util_Vessel").
 local Util_Launch is import("Util_Launch").
@@ -35,7 +34,7 @@ local launch_atm is lex(
 // Credit: Own recreated from ideas in mix of general	
 Function ff_preLaunch {
 	//TODO: Make gimble limits work.
-	Wait 1. //Alow Veriables to be set and Stabilise pre launch
+	Wait 1. //Alow Variables to be set and Stabilise pre launch
 	PRINT "Prelaunch.".
 	Lock Throttle to gl_TVALMax.
 	
@@ -57,7 +56,6 @@ Function ff_preLaunch {
 /////////////////////////////////////////////////////////////////////////////////////	
 // Credit: Own recreated from ideas in mix of general		
 Function ff_liftoff{
-	Print gl_TVALMax.
 	
 	STAGE. //Ignite main engines
 	Set EngineStartTime to TIME:SECONDS.
@@ -74,7 +72,6 @@ Function ff_liftoff{
 		}
 	}
 
-	Print gl_TVALMax.
 	Set CurrEngineThrust to 0.
 	
 	until CurrEngineThrust = MaxEngineThrust or EngineStartTime +5 > TIME:SECONDS{ // until upto thrust or the engines have attempted to get upto thrust for more than 5 seconds.
