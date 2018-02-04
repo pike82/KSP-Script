@@ -1,19 +1,29 @@
 
-{ // Start of anon
 
 //General Credits with ideas from the following:
 // Kevin Gisi: http://youtube.com/gisikw
 
 ///// Download Dependant libraies
-local Util_Engine is import("Util_Engine").
+
+FOR file IN LIST(
+	"Util_Engine"){ 
+		//Method for if to download or download again.
+		
+		IF (not EXISTS ("1:/" + file)) or (not runMode["runMode"] = 0.1)  { //Want to ignore existing files within the first runmode.
+			gf_DOWNLOAD("0:/Library/",file,file).
+			wait 0.001.	
+		}
+		RUNPATH(file).
+	}
+
 ///////////////////////////////////////////////////////////////////////////////////
 ///// List of functions that can be called externally
 ///////////////////////////////////////////////////////////////////////////////////
 
-    local OrbMnvNode is lex(
-		"Node_exec", ff_Node_exec@,
-		"User_Node_exec", ff_user_Node_exec@
-    ).
+    // local OrbMnvNode is lex(
+		// "Node_exec", ff_Node_exec@,
+		// "User_Node_exec", ff_user_Node_exec@
+    // ).
 
 ////////////////////////////////////////////////////////////////
 //File Functions
@@ -23,7 +33,7 @@ local Util_Engine is import("Util_Engine").
 function ff_Node_exec { // this function executes the node when ship has one
 // used to determine if the node exceution started and needs to return to this point.
 
-parameter autowarp is 0, Alrm is True, n is nextnode, v is n:burnvector, starttime is time:seconds + n:eta - Util_Engine["burn_time"](v:mag/2). 
+parameter autowarp is 0, Alrm is True, n is nextnode, v is n:burnvector, starttime is time:seconds + n:eta - ff_burn_time(v:mag/2). 
 	print "executing node".		  
 	If runMode:haskey("ff_Node_exec") = false{
 		If ADDONS:Available("KAC") AND Alrm {		  // if KAC installed	  
@@ -38,25 +48,34 @@ parameter autowarp is 0, Alrm is True, n is nextnode, v is n:burnvector, startti
 	// Lock Throttle to TVAL.
 	if autowarp warpto(starttime - 30).
 	Print "Start time: " + starttime.
+	RCS on.
 	wait until time:seconds >= starttime.
 	Print "Burn Start".
-	//local t is 0.
-	//lock throttle to t.
-	until vdot(n:burnvector, v) < 0.01 {
-	  if ship:maxthrust < 0.1 {
-		stage.
-		wait 0.1.
-		if ship:maxthrust < 0.1 {
-		  for part in ship:parts {
-			for resource in part:resources set resource:enabled to true.
-		  }
-		  wait 0.1.
-		}
-	  }
-	  //set t to min(Util_Engine["burn_time"](n:burnvector:mag), 1).
-	  Lock Throttle to min(Util_Engine["burn_time"](n:burnvector:mag), 1).
-	  wait 0.1.
+	
+	Local Stage_Req is False.
+	if n:burnvector:mag > ff_stage_delta_v(){
+		Set Stage_Req to True.
 	}
+	
+	until vdot(n:burnvector, v) < 0.01 {
+		if ship:maxthrust < 0.1 { // checks to see if the next engine is enagaded and if it is stage to activate engine
+			stage.
+			wait 0.1.
+			if ship:maxthrust < 0.1 {
+				for part in ship:parts {
+					for resource in part:resources{ 
+						set resource:enabled to true.
+					}
+				}
+				wait 0.1.
+			}
+		}
+		Lock Throttle to min(max(0.0001,ff_burn_time(n:burnvector:mag)),1).
+		if Stage_Req{
+			ff_Flameout().
+		}
+		wait 0.001.
+	}// end until
 	Lock Throttle to 0.0.
 	Print "Burn Complete".
 	unlock steering.
@@ -73,37 +92,25 @@ parameter autowarp is 0, Alrm is True, n is nextnode, v is n:burnvector, startti
 function ff_user_Node_exec {
 	Clearscreen.
 	local firstloop is 1.	
-	local secloop is 1.
 	Until firstloop = 0{
 		Print "Please Create a User node: To execute the node press 1, to Skip press 0".
+		Wait until terminal:input:haschar.
+		Print terminal:input:haschar.
 		Set termInput to terminal:input:getchar().
-		//Wait until terminal:input:haschar.
-		if termInput = 0 {
-			Set firstloop to 0.
-		}
-		else if termInput = 1{
+		
+		if termInput = 1{
 			If hasnode{
 				ff_Node_exec().
-				until secLoop = 0{
-					Print "Do you wish to create another node Y/N?".
-					Set termInput to terminal:input:getchar().
-					//Wait until terminal:input:haschar.
-					If termInput = "Y"{
-						Set firstloop to 1.
-					}
-					If Else = "N"{
-						Set firstloop to 0.
-						Set secloop to 0.
-					}
-					Else{
-						Print "Please enter a valid selction".
-					}
-				}
 			}
 			Else{
 				Print "Please make a node!!!".
 			}
 		}
+		
+		Else if termInput = 0 {
+			Set firstloop to 0.
+		}
+
 		Else {
 			Print "Please enter a valid selction".
 		}
@@ -111,14 +118,6 @@ function ff_user_Node_exec {
 	}//end untill
 	
 	
-	
-	
 }/// End Function	
 
-///////////////////////////////////////////////////////////////////////////////////
-//Export list of functions that can be called externally for the mission file	to use
-/////////////////////////////////////////////////////////////////////////////////////
-	
-  export(OrbMnvNode).
-} // End of anon
 

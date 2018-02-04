@@ -1,20 +1,18 @@
 
-{ // Start of anon
-
 ///// Download Dependant libraies
 
 ///////////////////////////////////////////////////////////////////////////////////
 ///// List of functions that can be called externally
 ///////////////////////////////////////////////////////////////////////////////////
-	local Util_Vessel is lex(
-		"tol", ff_Tolerance@,
-		"FAIRING",ff_FAIRING@,
-		"COMMS",ff_COMMS@,
-		"Gravity",ff_Gravity@,
-		"R_chutes_seq", ff_R_chutes_seq@,
-		"R_chutes", ff_R_chutes@,
-		"collect_science", ff_collect_science@
-	).
+	// local Util_Vessel is lex(
+		// "tol", ff_Tol@,
+		// "FAIRING",ff_FAIRING@,
+		// "COMMS",ff_COMMS@,
+		// "Gravity",ff_Gravity@,
+		// "R_chutes_seq", ff_R_chutes_seq@,
+		// "R_chutes", ff_R_chutes@,
+		// "collect_science", ff_collect_science@
+	// ).
 
 /////////////////////////////////////////////////////////////////////////////////////	
 //File Functions	
@@ -38,7 +36,7 @@ function solarpanels{
 
 /////////////////////////////////////////////////////////////////////////////////////
 	
-FUNCTION ff_Tolerance {
+FUNCTION ff_Tol {
 //Calculates if within tolerance and returns true or false
 	PARAMETER a. //current value
 	PARAMETER b.  /// Setpoint
@@ -49,13 +47,13 @@ FUNCTION ff_Tolerance {
 
 
 FUNCTION ff_COMMS {
-	PARAMETER stagewait IS 0.1.
-
+	PARAMETER event is "activate", stagewait IS 0.1.
+	// "deactivate"
 	IF SHIP:Q < 0.0045 {
 		FOR antenna IN SHIP:MODULESNAMED("ModuleRTAntenna") {
-			IF antenna:HASEVENT("activate") {
-				antenna:DOEVENT("activate").
-				PRINT "Activate Antennas".
+			IF antenna:HASEVENT(event) {
+				antenna:DOEVENT(event).
+				PRINT event + " Antennas".
 				WAIT stageWait.
 			}	
 		}.
@@ -82,23 +80,30 @@ function ff_R_chutes_seq {
 		set i to i+1.
 	}
 	set lestimestamp to time:seconds.
-	When ((time:seconds>lestimestamp+2)and(alt:radar<6000)) then{
-		print "drogues armed".
-		when drogues[0]:getfield("safe to deploy?")="safe" then {
-			set i to 0.
-			until i>=drogues:length {
-				if drogues[i]:hasevent("deploy chute") {
-					drogues[i]:doevent("deploy chute").
-				} 
-				set i to i+1.
-			}
-		}
-	}
+	// When ((time:seconds>lestimestamp+2)and(alt:radar<6000)) then{
+		// print "drogues armed".
+		// //Print drogues[0]:ALLFIELDNAMES.
+		// //Print drogues[0]:ALLEVENTS.
+		// //Print drogues[0]:ALLACTIONS.
+		// //when drogues[0]:getfield("safe to deploy?")="safe" then {
+			// set i to 0.
+			// until i>=drogues:length {
+				// if drogues[i]:hasevent("deploy chute") {
+					// drogues[i]:doevent("deploy chute").
+				// } 
+				// set i to i+1.
+			// }
+		// //}
+	// }
 	print "drogues deployed".
 	set lestimestamp to time:seconds.
-	When ((time:seconds>lestimestamp+0.5)and(alt:radar<2000)) then {
+	When ((time:seconds>lestimestamp+0.5)and(alt:radar<3000)) then {
+		Print mainchutes.
+		Print mainchutes[0]:ALLFIELDNAMES.
+		Print mainchutes[0]:ALLEVENTS.
+		Print mainchutes[0]:ALLACTIONS.
 		print "main chutes armed".
-		when mainchutes[0]:getfield("safe to deploy?")="safe" then {
+		//when mainchutes[0]:getfield("safe to deploy?")="safe" then {
 			set i to 0.
 			until i>=mainchutes:length {
 				if mainchutes[i]:hasevent("deploy chute") {
@@ -106,9 +111,16 @@ function ff_R_chutes_seq {
 				}
 				set i to i+1.
 			}
-		}
+		//}
 	}
 	print "main chutes deployed".
+	
+	WHEN (NOT CHUTESSAFE) THEN {
+    CHUTESSAFE ON.
+    RETURN (NOT CHUTES).
+	
+	wait 5.0.
+}
 	
 }// End Function
 
@@ -121,13 +133,14 @@ parameter event.
 	//["R_chutes"]("cut chute").
 	for RealChute in ship:modulesNamed("RealChuteModule") {
 		RealChute:doevent(event).
+		Print event + " enabled.".
 	}
 }// End Function
 
 ///////////////////////////////////////////////////////////////////////////////////
 
 function ff_Gravity{
-	Parameter Surface_Elevation is gl_surfaceElevation.
+	Parameter Surface_Elevation is gl_surfaceElevation().
 	Set SEALEVELGRAVITY to body:mu / (body:radius)^2. // returns the sealevel gravity for any body that is being orbited.
 	Set GRAVITY to body:mu / (ship:Altitude + body:radius)^2. //returns the current gravity experienced by the vessel	
 	Set AvgGravity to sqrt(		(	(GRAVITY^2) +((body:mu / (Surface_Elevation + body:radius)^2 )^2)		)/2		).// using Root mean square function to find the average gravity between the current point and the surface which have a squares relationship.
@@ -213,7 +226,6 @@ function hf_transfer_science {
 }
 	
 	
-	
 // function ff_Science
 // {
   // parameter one_use IS TRUE, overwrite IS FALSE.
@@ -232,10 +244,5 @@ function hf_transfer_science {
 		// }
 	// }
 // }	//end function
-	
-/////////////////////////////////////////////////////////////////////////////////////
-//Export list of functions that can be called externally for the mission file	to use
-/////////////////////////////////////////////////////////////////////////////////////
-	
-    export(Util_Vessel).
-} // End of anon
+
+

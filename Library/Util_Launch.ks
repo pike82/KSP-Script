@@ -1,15 +1,14 @@
 
-{ // Start of anon
+///// Download Dependant libraies
 
 ///////////////////////////////////////////////////////////////////////////////////
 ///// List of functions that can be called externally
 ///////////////////////////////////////////////////////////////////////////////////
-	local Util_Launch is lex(
-		"LaunchAzimuth", ff_LaunchAzimuth@,
-		"launchwindow", ff_launchwindow@,
-		"FlightAzimuth", ff_FlightAzimuth@
-	).
-
+	// local Util_Launch is lex(
+		// "LaunchAzimuth", ff_LaunchAzimuth@,
+		// "launchwindow", ff_launchwindow@,
+		// "FlightAzimuth", ff_FlightAzimuth@
+	// ).
 	
 ////////////////////////////////////////////////////////////////
 //File Functions
@@ -182,9 +181,3 @@ function hf_normalvector{
 }
 
 
-/////////////////////////////////////////////////////////////////////////////////////
-//Export list of functions that can be called externally for the mission file	to use
-/////////////////////////////////////////////////////////////////////////////////////
-	
-    export(Util_Launch).
-} // End of anon

@@ -4,19 +4,28 @@
 //Credits: Own with utilisation of code and credits within the Hill Climb file.
 
 ///// Download Dependant libraies
-local Hill_Climb is import("Hill_Climb").
-local OrbMnvNode is import("OrbMnvNode").
-local OrbMnvs is import("OrbMnvs").
-local Util_Orbit is import("Util_Orbit").
+
+FOR file IN LIST(
+	"Util_Vessel",
+	"OrbMnvNode",
+	"OrbMnvs",
+	"Util_Orbit"){ 
+		IF not EXISTS("1:/" + file) {
+			RUNONCEPATH(gf_DOWNLOAD("0:/Library/",file,file)). 
+			wait 0.001.
+		}
+		RUNPATH(file).
+	}
+
 
 ///////////////////////////////////////////////////////////////////////////////////
 ///// List of functions that can be called externally
 ///////////////////////////////////////////////////////////////////////////////////
 
-    local ORBRV is lex(
-		"BodyTransfer", ff_BodyTransfer@,
-		"CraftTransfer", ff_CraftTransfer@
-    ).
+    // local ORBRV is lex(
+		// "BodyTransfer", ff_BodyTransfer@,
+		// "CraftTransfer", ff_CraftTransfer@
+    // ).
 
 ////////////////////////////////////////////////////////////////
 //File Functions
@@ -81,11 +90,11 @@ PARAMETER tgt, Curr_time, t_pe is 0, inc_tgt is 0.
 	LOCAL first_est is NODE(u_time + (phi_delta / rel_ang_Change), 0, 0, dv). // this creates the node (best refined by a hill climb) which can be used to gain a good first approximation of the time required to speed up the solution.
 	
 	if runMode:haskey("ff_Node_exec") {
-		OrbMnvNode["Node_exec"](int_Warp).		
+		ff_Node_exec(int_Warp).		
 	} //end runModehaskey if
 	Else{	
 		hf_seek_SOI(tgt, t_pe, inc_tgt, dv*1.2, u_time + (phi_delta / rel_ang_Change), 0, 0, dv).
-		OrbMnvNode["Node_exec"](int_Warp).
+		ff_Node_exec(int_Warp).
 	} //end else
 
 	return final_node.
@@ -94,11 +103,11 @@ PARAMETER tgt, Curr_time, t_pe is 0, inc_tgt is 0.
 Function ff_BodyTransfer {	
 Parameter target_Body, Target_Perapsis, maxDV is 1000, IncTar is 90, int_Warp is False. // note the target name does not need to be sourrounded by quotations
 	if runMode:haskey("ff_Node_exec") {
-		OrbMnvNode["Node_exec"](int_Warp).		
+		ff_Node_exec(int_Warp).		
 	} //end runModehaskey if
 	Else{	
 		hf_seek_SOI(target_Body, Target_Perapsis, IncTar, maxDV).
-		OrbMnvNode["Node_exec"](int_Warp).
+		ff_Node_exec(int_Warp).
 	} //end else
 }  /// End Function
 	
@@ -109,7 +118,7 @@ Parameter target_Body, Target_Perapsis, maxDV is 1000, IncTar is 90, int_Warp is
 Function ff_CraftTransfer {	
 	Parameter target_ves, Target_dist, Max_orbits, int_Warp is False. // note the target name does not need to be sourrounded by quotations
 	if runMode:haskey("ff_Node_exec") {
-		OrbMnvNode["Node_exec"](int_Warp).		
+		ff_Node_exec(int_Warp).		
 	} //end runModehaskey if
 	if runMode:haskey("ff_Node_exec") = false{
 		gf_set_runmode("ff_CraftTransfer",1).
@@ -119,14 +128,14 @@ Function ff_CraftTransfer {
 		Set temp to hf_TransferBurn(target_ves, Target_dist, Max_orbits, int_Warp).
 		gf_set_runmode("ff_CraftTransferBurn",temp).
 		gf_set_runmode("ff_CraftTransfer",2).
-		OrbMnvNode["Node_exec"](int_Warp).
+		ff_Node_exec(int_Warp).
 	}//end if
 	If runMode["ff_CraftTransfer"] = 2{
 		if time:seconds < runMode["ff_CraftTransferBurn"]{
 			//Checks to see if this node has been completed in the first if statement. If so skip this step and just remove the runmodes.
 			hf_TransferRV(target_ves, Target_dist, runMode["ff_CraftTransferBurn"], int_Warp).
 			gf_remove_runmode("ff_CraftTransferBurn").
-			OrbMnvNode["Node_exec"](int_Warp).
+			ff_Node_exec(int_Warp).
 		}
 		gf_remove_runmode("ff_CraftTransfer").
 	} //end if
@@ -140,7 +149,7 @@ Function ff_CraftTransfer {
 function hf_seek_SOI {
 	parameter target_body, target_periapsis, IncTar, maxDV,
 		  start_time is time:seconds + 600, r is 0, n is 0, p is 0. 
-	local data is Hill_Climb["Seek"] (
+	local data is ff_Seek (
 		start_time, r, n, p, 
 		{  
 		parameter mnv.
@@ -155,7 +164,7 @@ function hf_seek_SOI {
 		} //end seek parameter
 	). //stores the results as a data set enabling a search within another search. This Level is the inner search
 
-	return Hill_Climb["Seek"](
+	return ff_Seek(
 		data[0], data[1], data[2], data[3], 
 		{
 		parameter mnv.
@@ -174,7 +183,7 @@ function hf_seek_SOI {
 function hf_TransferInc {
 parameter target_vessel, target_distance, int_Warp is False.
 	local arr is lexicon().
-	Set arr to Util_Orbit["Find_AN_INFO"](target_vessel).
+	Set arr to ff_Find_AN_INFO(target_vessel).
 	Set AN_inc to arr ["AN_inc"].
 	Set Max_inc to min(
 						arctan(target_distance/(target_vessel:orbit:APOAPSIS + Body:RADIUS)),
@@ -191,7 +200,7 @@ parameter target_vessel, target_distance, int_Warp is False.
 		Print "Inclination adjustment".
 		Print "Max Inc"+Max_inc/2.
 		Print "AN Inc" + AN_inc.
-		OrbMnvs["AdjPlaneInc"](0, target_vessel,(Max_inc/4),int_Warp). //Conduct inc change is required.
+		ff_AdjPlaneInc(0, target_vessel,(Max_inc/4),int_Warp). //Conduct inc change is required.
 	} // end else
 	
 } //end function TransferInc
@@ -337,7 +346,7 @@ Local atm_Height is 0.
 		Print "Intercept not possible, Orbit too small, increasing Apoapsis at Periapsis".
 		if orbCatchup > Max_orbits{
 			Print "Increasing Apoapsis from Periapsis as orbits too similar to make intercept in max orbits".
-			OrbMnvs["adjApo"](Pe_Tar+target_distance, 50, true). //increases apoapsis to be higher than the target crafts periapsis - the target distance to ensure inside the Apoapsis
+			ff_adjApo(Pe_Tar+target_distance, 50, true). //increases apoapsis to be higher than the target crafts periapsis - the target distance to ensure inside the Apoapsis
 			Set Starting_time to time:seconds + ETA:PERIAPSIS. // need to recalculate the starting time based on the new orbit (we know we are at the apoapsis so enough time before the periapsis).
 		}
 		Wait 10.0. //debugging
@@ -353,7 +362,7 @@ Local atm_Height is 0.
 			Print "SMAReq: " + SMAReq.
 			Set ApReq to ((2*SMAReq) - (Ship:orbit:Periapsis + body:radius))- body:radius. //Ap = 2SMA-Pe Note: Units in distance from centre of body so need radius conversion for calc and then back.
 			Print "ApReq: " + ApReq.
-			OrbMnvs["adjapo"](ApReq, 50, true).
+			ff_adjapo(ApReq, 50, true).
 			Set Starting_time to time:seconds + ETA:PERIAPSIS. // need to recalculate the starting time based on the new orbit (we know we have just passed the periapsis).
 		}
 		Wait 10.0. //debugging
@@ -388,7 +397,7 @@ parameter target_vessel, target_distance, result, int_Warp is False.
 	Set result2 to hf_separation_orbits(target_vessel, result1["time"]()-10, result1["time"]() +10, 1,target_distance).
 	Print "Cancel Relative Velocity Seperation Result:" + result2["seperation"]() + " at " + result2["time"]().
 
-	Hill_Climb["Seek_low"](Hill_Climb["freeze"](result2["time"]()), 0, Hill_Climb["freeze"](0), 0,{  
+	ff_Seek_low(ff_freeze(result2["time"]()), 0, ff_freeze(0), 0,{  
 		parameter mnv.
 		Local v1 is velocityat(target_vessel, result2["time"]()+0.1):orbit. //check velocity after node
 		Local v2 is velocityat(ship, result2["time"]() +0.1):orbit. //check velocity after node
@@ -484,7 +493,7 @@ Local result1 is lexicon().
 Local result2 is lexicon().
 Local result3 is lexicon().
 Local tempResult is 0.
-	Hill_Climb["Seek_low"](Hill_Climb["freeze"](Starting_time), 0, Hill_Climb["freeze"](0), 0,
+	ff_Seek_low(ff_freeze(Starting_time), 0, ff_freeze(0), 0,
 		{  	parameter mnv.
 			Set result to hf_separation_orbits(target_vessel, Starting_time, Max_Orb_UT, 60, target_distance).
 			Set result1 to hf_separation_orbits(target_vessel, result["time"]()-200, result["time"]() +200, 10, target_distance).

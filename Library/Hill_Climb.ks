@@ -1,5 +1,4 @@
 
-{ // Start of anon
 
 //Credits: All script and ideas are all from the following with a couple of modifications to allow more refined seeking if required:
 // http://youtube.com/gisikw
@@ -8,13 +7,13 @@
 ///// List of functions that can be called externally
 ///////////////////////////////////////////////////////////////////////////////////
 
-    local Hill_Climb is lex(
-		"freeze", ff_freeze@,
-		"seek", ff_seek@,
-		"seek_low" , ff_seek_low@,
-		"seek_verylow" , ff_seek_verylow@,
-		"optimize", ff_optimize@
-    ).
+    // local Hill_Climb is lex(
+		// "freeze", ff_freeze@,
+		// "seek", ff_seek@,
+		// "seek_low" , ff_seek_low@,
+		// "seek_verylow" , ff_seek_verylow@,
+		// "optimize", ff_optimize@
+    // ).
 
 ////////////////////////////////////////////////////////////////
 //File Functions
@@ -161,12 +160,7 @@
 		return results. // Return the list of neighbours for the data that can be changed (i.e. unfrozen)
 	  }  /// End Function	  
 	  
-///////////////////////////////////////////////////////////////////////////////////
-//Export list of functions that can be called externally for the mission file	to use
-/////////////////////////////////////////////////////////////////////////////////////
-	
-  export(Hill_Climb).
-} // End of anon
+
 
 
 

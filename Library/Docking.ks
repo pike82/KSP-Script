@@ -1,17 +1,18 @@
-{ // Start of anon
 
 //General Credits, script and ideas came from the following:
 // http://youtube.com/gisikw
 
 
+///// Download Dependant libraies
+
 ///////////////////////////////////////////////////////////////////////////////////
 ///// List of functions that can be called externally
 ///////////////////////////////////////////////////////////////////////////////////
 
-	local Docking is lex(
-		"dok_dock", ff_dok_dock@,
-		"undock",ff_undock@
-	).
+	// local Docking is lex(
+		// "dok_dock", ff_dok_dock@,
+		// "undock",ff_undock@
+	// ).
 
 ////////////////////////////////////////////////////////////////
 //File Functions
@@ -143,14 +144,16 @@
 	FUNCTION hf_dok_translate { // move the ship in the direction of the vector inputed as a parameter
 	PARAMETER vector.
 	  
-	  IF vector:MAG > 1 SET vector TO vector:normalized.
-
-	  SET SHIP:CONTROL:STARBOARD  TO vector * SHIP:FACING:STARVECTOR.
-	  SET SHIP:CONTROL:FORE       TO vector * SHIP:FACING:FOREVECTOR.
-	  SET SHIP:CONTROL:TOP        TO vector * SHIP:FACING:TOPVECTOR.
-	  //Print (vector * SHIP:FACING:STARVECTOR).
-	  //Print (vector * SHIP:FACING:FOREVECTOR).
-	  //Print (vector * SHIP:FACING:TOPVECTOR).
+		IF vector:MAG > 1 {
+			SET vector TO vector:normalized.
+		}
+		//SET SHIP:CONTROL:TRANSLATION to vector.
+		SET SHIP:CONTROL:STARBOARD  TO vector * SHIP:FACING:STARVECTOR.
+		SET SHIP:CONTROL:FORE       TO vector * SHIP:FACING:FOREVECTOR.
+		SET SHIP:CONTROL:TOP        TO vector * SHIP:FACING:TOPVECTOR.
+		//Print (vector * SHIP:FACING:STARVECTOR).
+		//Print (vector * SHIP:FACING:FOREVECTOR).
+		//Print (vector * SHIP:FACING:TOPVECTOR).
 	}// End Function
 	
 ///////////////////////////////////////////////////////////////////////////////////
@@ -374,9 +377,3 @@
 	  hf_dok_translate(V(0,0,0)).
 	}// End Function
 	
-///////////////////////////////////////////////////////////////////////////////////
-//Export list of functions that can be called externally for the mission file	to use
-/////////////////////////////////////////////////////////////////////////////////////
-
-  export(Docking).
-} // End of anon

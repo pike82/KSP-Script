@@ -1,42 +1,50 @@
 
-{ // Start of anon
-
 //http://www.bogan.ca/orbits/kepler/orbteqtn.html
 //https://en.wikipedia.org/wiki/Orbital_mechanics
 
 ///// Download Dependant libraies
-local Hill_Climb is import("Hill_Climb").
+
+FOR file IN LIST(
+	"Hill_Climb"){ 
+		//Method for if to download or download again.
+		
+		IF (not EXISTS ("1:/" + file)) or (not runMode["runMode"] = 0.1)  { //Want to ignore existing files within the first runmode.
+			gf_DOWNLOAD("0:/Library/",file,file).
+			wait 0.001.	
+		}
+		RUNPATH(file).
+	}
 
 ///////////////////////////////////////////////////////////////////////////////////
 ///// List of functions that can be called externally
 ///////////////////////////////////////////////////////////////////////////////////
 
-    local Util_Orbit is lex(
-		"EccOrbitVel", ff_EccOrbitVel@,
-		"CircOrbitVel", ff_CircOrbitVel@,
-		"Find_AN_INFO", ff_Find_AN_INFO@,
-		"Find_AN_UT", ff_Find_AN_UT@,
-		"TAr", ff_TAr@,
-		"timeFromTA", ff_timeFromTA@,  
-		"TAtimeFromPE", ff_TAtimeFromPE@,
-		"quadraticMinus", ff_quadraticMinus@,
-		"quadraticPlus", ff_quadraticPlus@,
-		"OrbVel", ff_OrbVel@,  
-		"OrbPer",ff_OrbPer@,
-		"HorVecAt", ff_HorVecAt@,
-		"OrbSLR", ff_OrbSLR@,
-		"OrbSLRh", ff_OrbSLRh@,
-		"TAvec",ff_TAvec@,
-		"EccAnom", ff_EccAnom@,
-		"MeanAnom", ff_MeanAnom@,
-		"normalvector", ff_normalvector@,
-		"eccentrcity", ff_eccentrcity@,
-		"OrbitEnergy", ff_OrbitEnergy@,
-		"Orbit_Ang_Mom", ff_Orbit_Ang_Mom@,
-		"Orbit_KE", ff_Orbit_KE@,
-		"Orbit_PE", ff_Orbit_PE@,
-		"OrbitSplitVel", ff_OrbitSplitVel@
-	).
+    // local Util_Orbit is lex(
+		// "EccOrbitVel", ff_EccOrbitVel@,
+		// "CircOrbitVel", ff_CircOrbitVel@,
+		// "Find_AN_INFO", ff_Find_AN_INFO@,
+		// "Find_AN_UT", ff_Find_AN_UT@,
+		// "TAr", ff_TAr@,
+		// "timeFromTA", ff_timeFromTA@,  
+		// "TAtimeFromPE", ff_TAtimeFromPE@,
+		// "quadraticMinus", ff_quadraticMinus@,
+		// "quadraticPlus", ff_quadraticPlus@,
+		// "OrbVel", ff_OrbVel@,  
+		// "OrbPer",ff_OrbPer@,
+		// "HorVecAt", ff_HorVecAt@,
+		// "OrbSLR", ff_OrbSLR@,
+		// "OrbSLRh", ff_OrbSLRh@,
+		// "TAvec",ff_TAvec@,
+		// "EccAnom", ff_EccAnom@,
+		// "MeanAnom", ff_MeanAnom@,
+		// "normalvector", ff_normalvector@,
+		// "eccentrcity", ff_eccentrcity@,
+		// "OrbitEnergy", ff_OrbitEnergy@,
+		// "Orbit_Ang_Mom", ff_Orbit_Ang_Mom@,
+		// "Orbit_KE", ff_Orbit_KE@,
+		// "Orbit_PE", ff_Orbit_PE@,
+		// "OrbitSplitVel", ff_OrbitSplitVel@
+	// ).
 
 ////////////////////////////////////////////////////////////////
 //File Functions
@@ -49,9 +57,9 @@ function ff_EccOrbitVel{ //returns the eccentirc orbital velocity of the ship at
 	return vel.
 }
 	
-declare function ff_CircOrbitVel{ //returns the circular orbital velocity of the current ship at a specific altitude.
+function ff_CircOrbitVel{ //returns the circular orbital velocity of the current ship at a specific altitude.
 	parameter alt.
-	return sqrt((constant:g*body:mass)/(alt+body:radius)).
+	return sqrt(Body:MU/(alt + body:radius)).
 }
 
 Function ff_Find_AN_INFO { // returns parameters related to the ascending node of the current vessel and a target vessel.
@@ -166,25 +174,30 @@ function ff_timeFromTA {
 //TODO: Check this code work for all positions and cases need to check if TA time from PE returns only in one direction or swaps times once 180 degrees has been reached.
 
 	parameter TA, ecc. // True anomoly (must be in radians), eccentricity.
-	Local timetoPer is ff_TAtimeFromPE (TA, ecc).
-	If (ETA:periapsis + timetoPer) - Ship:orbit:Period > 0{ // we know we will get to the TA before the PE.
-		local TA_time is (ETA:periapsis + timetoPer) - Ship:orbit:Period.
+	Local timetoTA is ff_TAtimeFromPE (TA, ecc).
+	Print (ETA:periapsis + timetoTA).
+	Print Ship:orbit:Period.
+	Print (ETA:periapsis + timetoTA) - Ship:orbit:Period.
+	If (ETA:periapsis + timetoTA) - Ship:orbit:Period > 0{ // we know we will get to the TA before the PE.
+		Print "Not Else".
+		return (ETA:periapsis + timetoTA) - Ship:orbit:Period.
 	}
 	Else {  // we know we will get to the PE before the TA.
-		local TA_time is (ETA:periapsis + timetoPer).
+		return  (ETA:periapsis + timetoTA). //TA time from PE in seconds (add time:seconds to get UT).
+		Print "Else".
 	}
-	
-	return TA_time. //TA time from PE in seconds
 }
 
 function ff_TAtimeFromPE {
-	parameter TA, ecc. // True anomoly (must be in radians), eccentricity.
+	parameter TA, ecc. // True anomoly (must be in degrees), eccentricity.
 	local EA is ff_EccAnom(ecc, TA).
 	Print "EA:" + EA.
 	local MA is ff_MeanAnom(ecc, EA).
 	Print "MA:" + MA.
-	local TA_time is MA/(2*constant:pi/Ship:orbit:Period).
-	//Print "TA Time From PE:" + TA_time.
+	local TA_time is Ship:orbit:Period/360. //sec per degree
+	Print "TA time intermediate: " + TA_time.
+	Set TA_time to MA*TA_time.
+	Print "TA Time From PE:" + TA_time.
 	return TA_time. //TA time from PE in seconds, Range from 0 to Ship:Orbital period
 }
 
@@ -204,8 +217,8 @@ function ff_OrbVel {
 }
 
 function ff_OrbPer {
-	parameter a, mu. // Semimajoraxis, mu.
-	return 2 * constant:pi * sqrt(a^3/mu).//returns Orbital period
+	parameter a, mu is body:mu. // Semimajoraxis, mu.
+	return (2 * constant:pi) * sqrt((a^3)/mu).//returns Orbital period
 }
 
 function ff_HorVecAt {
@@ -244,16 +257,20 @@ function ff_TAvec {
 
 function ff_EccAnom {
 	parameter ecc, TA. // eccentricity, True Anomoly (in radians or degrees).
-	local E is arccos((ecc + cos(TA)) / (1 + ecc * cos(TA))).
-	//Print "EccAnom:" + E.
-	return E. //Eccentric Anomoly in True anomoly input (radians or degrees)
+	Print ecc.
+	Print TA.
+	local E is arccos(  (ecc + cos(TA)) / (1 + (ecc * cos(TA)))  ).
+	Print "EccAnom:" + E.	
 	//Old version
-	//Set E to arctan(sqrt(1-(ecc*ecc))*sin(TA) ) / ( ecc + cos(TA) )
+	//Local E is arctan(sqrt(1-(ecc*ecc))*sin(TA) ) / ( ecc + cos(TA) ). // note this version is suitable for radians only
+	//Print "Old EccAnom:" + E.
+	return E. //Eccentric Anomoly in True anomoly input (radians or degrees)
+
 }
 
 function ff_MeanAnom {
 	parameter ecc, EccAnom. // eccentricity, Eccentric Anomoly (in radians or degrees).
-	local MA is EccAnom - ecc * sin(EccAnom).
+	local MA is EccAnom - (ecc * sin(EccAnom)).
 	//Print "MeanAnom:" + MA.
 	return MA. //Mean Anomoly in EccAnom input(radians or degrees)
 }
@@ -314,10 +331,5 @@ function ff_OrbitSplitVel{
 
 
 
-///////////////////////////////////////////////////////////////////////////////////
-//Export list of functions that can be called externally for the mission file	to use
-/////////////////////////////////////////////////////////////////////////////////////
-	
-  export(Util_Orbit).
-} // End of anon
+
 

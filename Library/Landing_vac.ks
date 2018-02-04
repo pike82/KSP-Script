@@ -1,29 +1,37 @@
 
-{ // Start of anon
 
 //Most components of this file are self researched with some with ideas sourced from https://github.com/KK4TEE/kOSPrecisionLand
 // and http://www.danielrings.com/2014/08/07/kspkos-grasshopper-a-model-of-spacexs-grasshopper-program-in-the-kerbal-space-program-using-the-kos-mod/
 
 
 ///// Download Dependant libraies
-local Util_Engine is import("Util_Engine").
-local Util_Landing is import("Util_Landing").
-local Util_Vessel is import("Util_Vessel").
-//local Flight is import("Flight").
-local Util_Orbit is import("Util_orbit").
-local Hill_Climb is import("Hill_Climb").
+
+FOR file IN LIST(
+	"Util_Engine",
+	"Util_Landing",
+	"Util_Vessel",
+	"Hill_Climb",
+	"Util_Orbit"){ 
+		//Method for if to download or download again.
+		
+		IF (not EXISTS ("1:/" + file)) or (not runMode["runMode"] = 0.1)  { //Want to ignore existing files within the first runmode.
+			gf_DOWNLOAD("0:/Library/",file,file).
+			wait 0.001.	
+		}
+		RUNPATH(file).
+	}
 
 ///////////////////////////////////////////////////////////////////////////////////
 ///// List of functions that can be called externally
 ///////////////////////////////////////////////////////////////////////////////////
 
-	local landing_vac is lex(
-		"SuBurn",ff_SuBurn@,
-		"CAB", ff_CAB@,
-		"BestLand", ff_BestLand@,
-		"HoverLand",ff_HoverLand@,
-		"LandingPointSetup",ff_LandingPointSetup@
-	).
+	// local landing_vac is lex(
+		// "SuBurn",ff_SuBurn@,
+		// "CAB", ff_CAB@,
+		// "BestLand", ff_BestLand@,
+		// "HoverLand",ff_HoverLand@,
+		// "LandingPointSetup",ff_LandingPointSetup@
+	// ).
 
 ////////////////////////////////////////////////////////////////
 //File Functions
@@ -36,7 +44,7 @@ Parameter ThrottelStartUp is 0.1, SafeAlt is 75, EndVelocity is 0.5. // end velo
 	local Flight_Arr is lexicon().
 	set Flight_Arr to hf_fall().
 	LOCK STEERING to HEADING(90,90). // Lock in upright posistion and fixed rotation
-	Until Flight_Arr["fallDist"] + SafeAlt + (ThrottelStartUp * abs(ship:verticalspeed)) > gl_baseALTRADAR{ // until the radar height is at the suicide burn height plus safe altitude and an allowance for the engine to throttle up to max thrust
+	Until Flight_Arr["fallDist"] + SafeAlt + (ThrottelStartUp * abs(ship:verticalspeed)) > gl_baseALTRADAR(){ // until the radar height is at the suicide burn height plus safe altitude and an allowance for the engine to throttle up to max thrust
 		//Run screen update loop to inform of suicide burn wait.
 		Set Flight_Arr to hf_fall().
 		Clearscreen.
@@ -44,7 +52,7 @@ Parameter ThrottelStartUp is 0.1, SafeAlt is 75, EndVelocity is 0.5. // end velo
 		Print "gl_fallVel:" + Flight_Arr["fallVel"].
 		Print "gl_fallDist:" + Flight_Arr["fallDist"].
 		Print "gl_fallBurnTime:" + Util_Engine["burn_time"](Flight_Arr["fallVel"]).
-		Print "Radar Alt:" + gl_baseALTRADAR.
+		Print "Radar Alt:" + gl_baseALTRADAR().
 		Wait 0.001.
 	}
 	//Burn Height has been reached start the burn
@@ -64,7 +72,7 @@ Parameter ThrottelStartUp is 0.1, SafeAlt is 75, EndVelocity is 0.5. // end velo
 //Credits: Own with ideas sourced from http://www.danielrings.com/2014/08/07/kspkos-grasshopper-a-model-of-spacexs-grasshopper-program-in-the-kerbal-space-program-using-the-kos-mod/
 // The hover land function maintains a hovers position and moves the ship to the coordinates wanted at the vertical speed requested in the ship veriable limits
 Function ff_hoverLand {	
-Parameter Hover_alt is 50, BaseLoc is gl_shipLatLng. 
+Parameter Hover_alt is 50, BaseLoc is gl_shipLatLng(). 
 	Set sv_PIDALT:SETPOINT to Hover_alt.
 	Set sv_PIDLAT:Setpoint to BaseLoc:Lat.
 	Set sv_PIDLONG:Setpoint to BaseLoc:Lng.
@@ -80,7 +88,7 @@ Parameter Hover_alt is 50, BaseLoc is gl_shipLatLng.
 		ClearScreen.
 		Print "Moving to Landing Position".	
 		Set dtStore to hf_LandingPIDControlLoop(dtStore["lastdt"], dtStore["lastPos"]).
-		if hf_geoDistance(BaseLoc, gl_shipLatLng) < 0.5{ //0.5m error before descent. Using geoDistance as distance is expected to be small (less than 1km)
+		if hf_geoDistance(BaseLoc, gl_shipLatLng()) < 0.5{ //0.5m error before descent. Using geoDistance as distance is expected to be small (less than 1km)
 			Set distanceTol to distanceTol + 0.1.	
 		}
 		Else{
@@ -92,7 +100,7 @@ Parameter Hover_alt is 50, BaseLoc is gl_shipLatLng.
 	//Set SteerDirection to HEADING(90,90). // TODO: This was in the old script, need to ensure this can be removed as it would be better if continual refinement can happen during the descent too.
 
 	Set sv_PIDALT:SETPOINT to -0.25. // set just below the surface to ensure touchdown
-	Until(gl_baseALTRADAR < 0.25) or (Ship:Status = "LANDED"){
+	Until(gl_baseALTRADAR() < 0.25) or (Ship:Status = "LANDED"){
 		ClearScreen.
 		Print "Landing".
 		Set dtStore to hf_LandingPIDControlLoop(dtStore["lastdt"], dtStore["lastPos"]).
@@ -124,7 +132,7 @@ Function ff_CAB{
 	Set StartMass to (ship:mass * 1000).
 	
 	until Horzvel <= EndHorzVel {//run the iteration until the ground velocity is 0 or another value if specified
-		Set StartMass to StartMass - Util_Engine["mdot"]().
+		Set StartMass to StartMass - ff_mdot().
 		Set acc to (ship:availablethrust* 1000)/(StartMass). //the acceleration of the ship in one second
 		
 		Set GravCancel to ((body:mu/(tgtPERad^2)) - ((Horzvel^2)/tgtPERad))/acc. //portion of vehicle acceleration used to counteract gravity as per PEG ascent guidance formula in one second
@@ -148,7 +156,7 @@ Function ff_CAB{
 	
 	local m is ship:mass * 1000. // Starting mass (kg)
 	local e is constant():e. // Base of natural log
-	local EstDv is (Util_Engine["Vel_Exhaust"]() * ln(m / (m - (profiletime*Util_Engine["mdot"])))).
+	local EstDv is (ff_Vel_Exhaust() * ln(m / (m - (profiletime*ff_mdot)))).
 	
 	Until time:seconds > BurnStartTime{
 		clearscreen.
@@ -205,7 +213,7 @@ Function ff_BestLand{
 
 	until Horzvel <= EndHorzVel {//run the iteration until the ground velocity is 0 or another value if specified
 		Set VerVelStart to VerVel.
-		Set StartMass to StartMass - Util_Engine["mdot"]().
+		Set StartMass to StartMass - ff_mdot().
 		Set acc to (ship:availablethrust* 1000)/(StartMass). //the acceleration of the ship in one second
 		Set VertAccel to ((body:mu/((tgtPERad-VerDist)^2)) - ((Horzvel^2)/(tgtPERad-VerDist))). //portion of vehicle acceleration used to counteract gravity as per PEG ascent guidance formula in one second
 		Set VerVel to VerVelStart - abs(VertAccel). // current vertical velocity.
@@ -232,9 +240,9 @@ Function ff_BestLand{
 	
 	local m is ship:mass * 1000. // Starting mass (kg)
 	local e is constant():e. // Base of natural log
-	local mdot is Util_Engine["mdot"]().
+	local mdot is ff_mdot().
 	Set massloss to profiletime * mdot.
-	local EstDv is Util_Engine["Vel_Exhaust"]().
+	local EstDv is ff_Vel_Exhaust().
 	Set EstDv to EstDv * ln(m / (m - massloss)).
 	
 	Until time:seconds > BurnStartTime{
@@ -266,7 +274,7 @@ Function ff_BestLand{
 	Lock Throttle to 1.0.
 	until (Basetime + profiletime +10 ) - time:seconds < 0 OR SHIP:GROUNDSPEED < 2{ //TODO: Make it so the +10 is not hardcoded in.
 		Set tgtFallheight to Flight_Arr["fallDist"] + SafeAlt + (ThrottelStartTime * abs(ship:verticalspeed)).
-		Set FALLSpeed to PIDFALL:UPDATE(TIME:SECONDS, gl_baseALTRADAR - tgtFallheight).
+		Set FALLSpeed to PIDFALL:UPDATE(TIME:SECONDS, gl_baseALTRADAR() - tgtFallheight).
 		Set PIDVV:SETPOINT to FALLSpeed.
 		Set dpitch TO PIDVV:UPDATE(TIME:SECONDS, verticalspeed). //Get the PID on the AlT diff as desired vertical velocity
 		Set highpitch to max(highpitch + dpitch,0). // Ensure the pitch does not go below zero as gravity will efficently lower the veritcal velocity if required
@@ -274,7 +282,7 @@ Function ff_BestLand{
 		Print "Limiting Descent Speed".
 		Print "Ground Speed: " + SHIP:GROUNDSPEED.
 		Print "tgtFallheight:" + tgtFallheight.
-		Print "Fall Clearance:" + (gl_baseALTRADAR - tgtFallheight).
+		Print "Fall Clearance:" + (gl_baseALTRADAR() - tgtFallheight).
 		Print "Fall speed:" + Fallspeed.
 		Print "Vertical speed:" + verticalspeed.
 		Print "Pitch: " + highpitch.
@@ -320,7 +328,7 @@ Function ff_LandingPointSetup{
 ////////////////////////////////////////////////////////////////
 Function hf_Fall{
 //Fall Predictions and Variables
-	local fallTime is Util_Orbit["quadraticPlus"](-gl_Grav["Avg"]/2, -ship:verticalspeed, gl_baseALTRADAR).//r = r0 + vt - 1/2at^2 ===> Quadratic equiation 1/2*at^2 + bt + c = 0 a= acceleration, b=velocity, c= distance
+	local fallTime is ff_quadraticPlus(-gl_Grav["Avg"]/2, -ship:verticalspeed, gl_baseALTRADAR()).//r = r0 + vt - 1/2at^2 ===> Quadratic equiation 1/2*at^2 + bt + c = 0 a= acceleration, b=velocity, c= distance
 	local fallVel is abs(ship:verticalspeed) + (gl_Grav["Avg"]*fallTime).//v = u + at
 	local fallAcc is (ship:AVAILABLETHRUST/ship:mass). // note is is assumed this will be undertaken in a vaccum so the thrust and ISP will not change. Otherwise if undertaken in the atmosphere drag will require a variable thrust engine so small variations in ISP and thrust won't matter becasue the thrust can be adjusted to suit.
 	local fallDist is (fallVel^2)/ (2*(fallAcc)). // v^2 = u^2 + 2as ==> s = ((v^2) - (u^2))/2a 
@@ -394,8 +402,8 @@ PARAMETER tgt_landing, max_dist, max_orbits is 100.
 		
 	LOCAL TA1 IS ArgLATs[0].
 	LOCAL TA2 IS ArgLATs[1].
-	LOCAL TA1_time IS base_time + Util_Orbit["timeFromTA"] (TA1, ship:orbit:eccentricity). 
-	LOCAL TA2_time IS base_time + Util_Orbit["timeFromTA"] (TA2, ship:orbit:eccentricity).
+	LOCAL TA1_time IS base_time + ff_timeFromTA (TA1, ship:orbit:eccentricity). 
+	LOCAL TA2_time IS base_time + ff_timeFromTA (TA2, ship:orbit:eccentricity).
 
 	IF TA2_time < TA1_time { // check to see which TA we are passing first
 		SET TA1_first TO FALSE. 
@@ -420,7 +428,7 @@ PARAMETER tgt_landing, max_dist, max_orbits is 100.
 			Set Spot to hf_BodyPositionAt(pass_time). // Set the spot to the predicted Co-ords when the ship passes over.
 			
 			IF ABS(spot:LNG - tgt_landing:LNG) < 3 {  // checks if within 3 degrees longitude
-				Local ShortDistTime is hill_climb["optimize"] (
+				Local ShortDistTime is ff_optimize (
 					pass_time, 
 					{
 						Parameter new_time. 
@@ -473,7 +481,7 @@ Parameter lastdt, lastPos.
 	Set LatDist to hf_geoDistance(LATLNG(gl_shipLatLng:Lat,tgt:Lng),tgt). // distance to tgt in Lat metres only
 	Set LngDist to hf_geoDistance(LATLNG(tgt:Lat,gl_shipLatLng:Lng),tgt). // distance to tgt in Lng metres only
 	
-	SET ALTSpeed TO sv_PIDALT:UPDATE(TIME:SECONDS, gl_baseALTRADAR). //Get the PID on the AlT diff as desired vertical velocity
+	SET ALTSpeed TO sv_PIDALT:UPDATE(TIME:SECONDS, gl_baseALTRADAR()). //Get the PID on the AlT diff as desired vertical velocity
 	Set LATSpeed to sv_PIDLAT:Update(TIME:SECONDS, gl_shipLatLng:Lat).//Get the PID on the Lat diff as desired lat in m/s
 	Set LONGSpeed to sv_PIDLONG:UPDATE(TIME:SECONDS, gl_shipLatLng:Lng). //Get the PID on the Long diff as desired long in m/s
 	
@@ -531,19 +539,19 @@ Parameter lastdt, lastPos.
 	//Print "Delta throttle: "+ dThrot.
 	Print "Throttle Setting: "+ ThrottSetting.
 	Print "Current Alt" + ship:Altitude.
-	Print "Ground Alt" + gl_surfaceElevation.
-	Print "Ground Dist" + gl_baseALTRADAR.
+	Print "Ground Alt" + gl_surfaceElevation().
+	Print "Ground Dist" + gl_baseALTRADAR().
 	Print "tgt Bearing :" + tgt:bearing.
 	Print "Calc tgt Bearing:" + hf_geoDir(gl_shipLatLng, tgt).
-	Print "Calc True tgt Bearing: " + hf_gs_bearing(gl_shipLatLng,tgt).
+	Print "Calc True tgt Bearing: " + hf_gs_bearing(gl_shipLatLng(),tgt).
 	Print "tgt Heading :" + tgt:heading.
 	Print "===============================".
-	Print "Base fall time: " + sqrt((2*gl_baseALTRADAR)/(gl_GRAV["G"])).
+	Print "Base fall time: " + sqrt((2*gl_baseALTRADAR())/(gl_GRAV["G"])).
 	Print "Fall time: " + Flight_Arr["fallTime"].	
 	Print "Fall vel: " + Flight_Arr["fallVel"].
 	Print "===============================".
 	
-	Set lastPos to gl_shipLatLng.
+	Set lastPos to gl_shipLatLng().
 	Set lastdt to TIME:SECONDS.
 	
 	Local Result is lexicon().
@@ -627,7 +635,7 @@ return result.
 
 function hf_ImpactEta {
     parameter acc, thrtl, g, vel, h.
-    return Orbit_Calc["quadraticMinus"]((acc * thrtl - g), vel, h).
+    return ff_quadraticMinus((acc * thrtl - g), vel, h).
 }
 
 function hf_cardVel {
@@ -654,11 +662,3 @@ function scalarProj { //Scalar projection of two vectors. Find component of a al
 	RETURN VDOT(a, b) * (1/b:MAG).
 }
 
-
-
-///////////////////////////////////////////////////////////////////////////////////
-//Export list of functions that can be called externally for the mission file to use
-/////////////////////////////////////////////////////////////////////////////////////
-	
-  export(landing_vac).
-} // End of anon

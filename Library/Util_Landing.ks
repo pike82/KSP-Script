@@ -1,5 +1,4 @@
 
-{ // Start of anon
 
 //Whole file is a work in progress
 
@@ -7,16 +6,26 @@
 //// http://www.movable-type.co.uk/scripts/latlong.html is a good source for bearing information on goecords on sphere
 
 ///// Download Dependant libraies
-local Util_Engine is import("Util_Engine").
-local Util_Vessel is import("Util_Vessel").
+
+FOR file IN LIST(
+	"Util_Engine",
+	"Util_Vessel"){ 
+		//Method for if to download or download again.
+		
+		IF (not EXISTS ("1:/" + file)) or (not runMode["runMode"] = 0.1)  { //Want to ignore existing files within the first runmode.
+			gf_DOWNLOAD("0:/Library/",file,file).
+			wait 0.001.	
+		}
+		RUNPATH(file).
+	}
 
 ///////////////////////////////////////////////////////////////////////////////////
 ///// List of functions that can be called externally
 ///////////////////////////////////////////////////////////////////////////////////
 
-	local Util_landing is lex(
-		"Suicide_info", ff_Suicide_info@
-	).
+	// local Util_landing is lex(
+		// "Suicide_info", ff_Suicide_info@
+	// ).
 
 ////////////////////////////////////////////////////////////////
 //File Functions
@@ -56,7 +65,7 @@ Function ff_goodLand{ // this is to be reviewed and parts put in vac_landing
 	
 	// //times
 	// Set HorzBurnTime to Util_Engine["burn_time"](PeHorzVel). // Burn Time if pure horizontal burn
-	// Set HozBurnTimeGravCancel to (HorzBurnTime /(sqrt(PeAvgGravity^2 + gl_TWR^2))/ HorzBurnTime ). //Approximate Burn Time required if performing CAB to PE
+	// Set HozBurnTimeGravCancel to (HorzBurnTime /(sqrt(PeAvgGravity^2 + gl_TWR()^2))/ HorzBurnTime ). //Approximate Burn Time required if performing CAB to PE
 	// Set VerBurnTime to Util_Engine["burn_time"](PeFallVel). //Burn time required if performing Suicide burn at PE
 
 	// //Suicide burn Calcs
@@ -185,7 +194,7 @@ return result.
 Function hf_PIDControlLoop{
 Parameter lastdt, lastLat, lastLng.
 	
-	SET ALTSpeed TO sv_PIDALT:UPDATE(TIME:SECONDS, gl_baseALTRADAR). //Get the PID on the AlT diff as desired vertical velocity
+	SET ALTSpeed TO sv_PIDALT:UPDATE(TIME:SECONDS, gl_baseALTRADAR()). //Get the PID on the AlT diff as desired vertical velocity
 	Set LATSpeed to sv_PIDLAT:Update(TIME:SECONDS, gl_shipLatLng:Lat).//Get the PID on the Lat diff as desired lat degrees/sec
 	Set LONGSpeed to sv_PIDLONG:UPDATE(TIME:SECONDS, gl_shipLatLng:Lng). //Get the PID on the Long diff as desired long degress/sec
 	
@@ -235,13 +244,13 @@ Parameter lastdt, lastLat, lastLng.
 	//Print "Delta throttle: "+ dThrot.
 	Print "Throttle Setting: "+ ThrottSetting.
 	Print "Alt" + ship:Altitude.
-	Print "Ground Alt" + gl_surfaceElevation.
+	Print "Ground Alt" + gl_surfaceElevation().
 	Print "Radar" + gl_baseALTRADAR.
 	Print "Heading: " + ship:heading.
 	Print "Bearing: " + ship:bearing.
-	Print "True Bearing: " + hf_gs_bearing(gl_shipLatLng,gl_NORTHPOLE).
+	Print "True Bearing: " + hf_gs_bearing(gl_shipLatLng(),gl_NORTHPOLE).
 	Print "===============================".
-	Print "Base fall time: " + sqrt((2*gl_baseALTRADAR)/(gl_GRAVITY)).
+	Print "Base fall time: " + sqrt((2*gl_baseALTRADAR())/(gl_GRAVITY())).
 	Print "Fall time: " + Flight_Arr["fallTime"].	
 	Print "Fall vel: " + Flight_Arr["fallVel"].
 
@@ -276,7 +285,7 @@ function hf_geoDir { //compass angle of direction to landing spot
 
 function hf_ImpactEta {
     parameter acc, thrtl, g, vel, h.
-    return Orbit_Calc["quadraticMinus"]((acc * thrtl - g), vel, h).
+    return ff_quadraticMinus((acc * thrtl - g), vel, h).
 }
 
 function hf_cardVel {
@@ -303,11 +312,3 @@ function scalarProj { //Scalar projection of two vectors. Find component of a al
 	RETURN VDOT(a, b) * (1/b:MAG).
 }
 
-
-
-///////////////////////////////////////////////////////////////////////////////////
-//Export list of functions that can be called externally for the mission file to use
-/////////////////////////////////////////////////////////////////////////////////////
-	
-  export(Util_landing).
-} // End of anon

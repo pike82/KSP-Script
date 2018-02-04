@@ -1,16 +1,16 @@
 
-{ // Start of anon
+///// Download Dependant libraies
 
 ///////////////////////////////////////////////////////////////////////////////////
 ///// List of functions that can be called externally
 ///////////////////////////////////////////////////////////////////////////////////
-	local Util_Engine is lex(
-		"FLAMEOUT", ff_STAGEFLAMEOUT@,
-		"stage_delta_v", ff_stage_delta_v@,
-		"burn_time", ff_burn_time@,
-		"mdot", ff_mdot@,
-		"Vel_Exhaust", ff_Vel_Exhaust@
-	).
+	// local Util_Engine is lex(
+		// "FLAMEOUT", ff_FLAMEOUT@,
+		// "stage_delta_v", ff_stage_delta_v@,
+		// "burn_time", ff_burn_time@,
+		// "mdot", ff_mdot@,
+		// "Vel_Exhaust", ff_Vel_Exhaust@
+	// ).
 
 /////////////////////////////////////////////////////////////////////////////////////	
 //File Functions	
@@ -18,16 +18,17 @@
 
 //Credits : Own with ideas chopped an changed from multiple KOS reddit posts
 	
-FUNCTION ff_STAGEFLAMEOUT {
+FUNCTION ff_FLAMEOUT {
 	PARAMETER Ullage is "RCS", stagewait is 2, ResFrac is 0.1.
 	local engine_count is 0.
 	local EnginesFlameout is 0.
 	
-	Print "Flameout".
+	//Print "Flameout".
 	
 	If Ullage = "RCS"{ /// ie. Use RCS or nothing to provide ullage
-	Print "RCS Flameout".
+	//Print "RCS Flameout".
 		///The following determiines the number of engines in the current stage that are flamed out.
+		LIST engines IN engList.
 		FOR eng IN engList {  //Loops through Engines in the Vessel
 			IF eng:STAGE >= STAGE:NUMBER { //Check to see if the engine is in the current Stage
 				Set engine_count to engine_count + 1.
@@ -36,9 +37,9 @@ FUNCTION ff_STAGEFLAMEOUT {
 				}
 			}
 		}
-		Print STAGE:NUMBER.
-		Print EnginesFlameout.
-		Print engine_count.
+		//Print STAGE:NUMBER.
+		//Print EnginesFlameout.
+		//Print engine_count.
 		If engine_count = EnginesFlameout {
 		//All engines required have flamed out
 			local RCSState is RCS. //Get the Current RCS State
@@ -55,6 +56,7 @@ FUNCTION ff_STAGEFLAMEOUT {
 	If Ullage = "boost"{ //i.e strap on solids or other boosters around a main engine that continues to burn so no ullage required
 	Print "Boost Flameout".
 		///The following determiines the number of engines in the current stage that are flamed out.
+		LIST engines IN engList.
 		FOR eng IN engList {  //Loops through Engines in the Vessel
 			IF eng:STAGE >= STAGE:NUMBER { //Check to see if the engine is in the current Stage
 				Set engine_count to engine_count + 1.
@@ -126,7 +128,9 @@ local engine_count is 0.
 local isp is 0. // Engine ISP (s)
 local RSS is True.
 	// obtain ISP
-	for en in engList if en:ignition and not en:flameout {
+	LIST engines IN engList.
+	for en in engList 
+	if en:ignition and not en:flameout {
 	  set isp to isp + en:isp.
 	  set engine_count to engine_count + 1.
 	}
@@ -178,12 +182,19 @@ parameter dV.
 	local engine_count is 0.
 	local thrust is 0.
 	local isp is 0. // Engine ISP (s)
+	
+	//TODO: look at comapring the dv with the ff_stage_delta_v. If less look at the engine in the next stage and determine the delta_v and time to burn until the dv has been meet.
 	list engines in all_engines.
 	for en in all_engines if en:ignition and not en:flameout {
 	  set thrust to thrust + en:availablethrust.
 	  set isp to isp + en:isp.
 	  set engine_count to engine_count + 1.
 	}
+	
+	if engine_count = 0{
+		return 1.
+	}
+	
 	set isp to isp / engine_count.
 	set thrust to thrust * 1000. // Engine Thrust (kg * m/s²)
 	return g * m * isp * (1 - e^(-dV/(g*isp))) / thrust.
@@ -228,10 +239,16 @@ function ff_Vel_Exhaust {
 }/// End Function
 	
 ///////////////////////////////////////////////////////////////////////////////////	
+
+//Credits: Own	
 	
-/////////////////////////////////////////////////////////////////////////////////////
-//Export list of functions that can be called externally for the mission file	to use
-/////////////////////////////////////////////////////////////////////////////////////
+function ff_RCS {
+	Parameter RCS_switch is "False".
+	list parts in all_parts.
+	for part in all_parts if Part:RESOURCES = "monoprop" {
+		Print Part.
+		Set Part:RESOURCE:enabled to RCS_switch.
+	}
+}/// End Function
 	
-    export(Util_Engine).
-} // End of anon
+///////////////////////////////////////////////////////////////////////////////////	

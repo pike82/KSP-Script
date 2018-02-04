@@ -20,7 +20,11 @@ Function File_List_compile{
 Parameter path.
 	for f in fileList:values{
 		//if f:isfile{ //ignores folders as these will throw an error on the extension call
-			if f:extension = "ks" and not compile_lex:haskey(f:name){ // a ks file with no ksm file in the lexicon, compile and add to the lexicon
+			if f:extension = "ks" and not filelist:haskey(f:name + "m") { // a ks file with no  present in the archive, compile and add to the lexicon
+				Compile path + f:name.
+				compile_Lex:add(f:name, f:Size).
+				Print "Compiled new file: " + f:name.
+			} Else if f:extension = "ks" and not compile_lex:haskey(f:name) { // a ks file with no ksm file in the lexicon, compile and add to the lexicon
 				Compile path + f:name.
 				compile_Lex:add(f:name, f:Size).
 				Print "Compiled new file: " + f:name.
@@ -30,7 +34,7 @@ Parameter path.
 					Set compile_lex[f:name] to f:Size.
 					Print "re-compiled existing file:" + f:name.
 				}
-			}
+			} 
 		//}
 	}
 } // End function

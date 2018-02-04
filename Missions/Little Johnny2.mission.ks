@@ -67,16 +67,13 @@ Function Mission_runModes{
 	
 	else if runMode["runMode"] = 2.1 { 
 		Print "Run mode is:" + runMode["runMode"].
-		until gl_baseALTRADAR > 30000 or ship:VERTICALSPEED < 0{
+		until gl_baseALTRADAR > 70000 or ship:VERTICALSPEED < 0{
 			Wait 0.1.
 		}
 		Util_Vessel["collect_science"]().
-		until gl_baseALTRADAR < 6000 and ship:VERTICALSPEED < 0{
-			Wait 0.1.
-		}
 		Util_Vessel["R_chutes"]("arm parachute").
 		gf_set_runmode("runMode",3.1).
-		wait 100.
+		wait 1000.
 	}	
 } /// end of function runmodes
 

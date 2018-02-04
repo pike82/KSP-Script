@@ -1,21 +1,18 @@
 
-{ // Start of anon
 
 //General Credits with ideas from the following:
 // https://github.com/KK4TEE/kOSPrecisionLand
 
 ///// Download Dependant libraies
-local Util_Orbit is import("Util_orbit").
-
 
 ///////////////////////////////////////////////////////////////////////////////////
 ///// List of functions that can be called externally
 ///////////////////////////////////////////////////////////////////////////////////
-	local Flight is lex(
-		"Vectors",ff_Vectors@,
-		"Velocities",ff_Velocities@,
-		"Angles", ff_Angles@
-	).
+	// local Flight is lex(
+		// "Vectors",ff_Vectors@,
+		// "Velocities",ff_Velocities@,
+		// "Angles", ff_Angles@
+	// ).
 
 /////////////////////////////////////////////////////////////////////////////////////	
 //File Functions	
@@ -30,7 +27,7 @@ local Util_Orbit is import("Util_orbit").
 	lock gl_PeLatLng to ship:body:geopositionof(positionat(ship, time:seconds + ETA:PERIAPSIS)). //The Lat and long of the PE
 
 	//Ship information
-	lock gl_landedshipHeight to ship:Altitude - gl_surfaceElevation.	// calculates the height of the ship if landed, if not landed use the flight variable or set one up seperately	
+	lock gl_landedshipHeight to ship:Altitude - gl_surfaceElevation().	// calculates the height of the ship if landed, if not landed use the flight variable or set one up seperately	
 	
 	
 	Function ff_Vectors{
@@ -97,10 +94,3 @@ local Util_Orbit is import("Util_orbit").
 		
 		Return(arr).
 	}
-	
-/////////////////////////////////////////////////////////////////////////////////////
-//Export list of functions that can be called externally for the mission file	to use
-/////////////////////////////////////////////////////////////////////////////////////
-	
-    export(Flight).
-} // End of anon

@@ -1,6 +1,4 @@
 
-{ // Start of anon
-
 //General Credits with ideas from the following:
 // Kevin Gisi: http://youtube.com/gisikw
 // KOS Community library
@@ -8,25 +6,34 @@
 
 
 ///// Download Dependant libraies
-local Flight is import("Flight").
-local Util_Vessel is import("Util_Vessel").
-local Util_Launch is import("Util_Launch").
-local Util_Engine is import("Util_Engine").
-local Util_Orbit is import("Util_Orbit").
+FOR file IN LIST(
+	"Flight",
+	"Util_Vessel",
+	"Util_Launch",
+	"Util_Engine",
+	"Util_Orbit"){ 
+		//Method for if to download or download again.
+		
+		IF (not EXISTS ("1:/" + file)) or (not runMode["runMode"] = 0.1)  { //Want to ignore existing files within the first runmode.
+			gf_DOWNLOAD("0:/Library/",file,file).
+			wait 0.001.	
+		}
+		RUNPATH(file).
+	}
 
 ///////////////////////////////////////////////////////////////////////////////////
 ///// List of functions that can be called externally
 ///////////////////////////////////////////////////////////////////////////////////
-local launch_atm is lex(
-	"preLaunch", ff_preLaunch@,
-	"liftoff", ff_liftoff@,
-	"liftoffclimb", ff_liftoffclimb@,
-	"GravityTurnAoA", ff_GravityTurnAoA@,
-	"GravityTurnPres", ff_GravityTurnPres@,
-	"Coast", ff_Coast@,
-	"InsertionPIDSpeed", ff_InsertionPIDSpeed@,
-	"InsertionPEG", ff_InsertionPEG@
-).
+// local launch_atm is lex(
+	// "preLaunch", ff_preLaunch@,
+	// "liftoff", ff_liftoff@,
+	// "liftoffclimb", ff_liftoffclimb@,
+	// "GravityTurnAoA", ff_GravityTurnAoA@,
+	// "GravityTurnPres", ff_GravityTurnPres@,
+	// "Coast", ff_Coast@,
+	// "InsertionPIDSpeed", ff_InsertionPIDSpeed@,
+	// "InsertionPEG", ff_InsertionPEG@
+// ).
 
 ////////////////////////////////////////////////////////////////
 //File Functions
@@ -36,7 +43,7 @@ Function ff_preLaunch {
 	//TODO: Make gimble limits work.
 	Wait 1. //Alow Variables to be set and Stabilise pre launch
 	PRINT "Prelaunch.".
-	Lock Throttle to gl_TVALMax.
+	Lock Throttle to gl_TVALMax().
 	
 	Print "Current Stage:" + STAGE:NUMBER.
 	LOCK STEERING TO HEADING(90, 90). //this is locked 90,90 only until the clamps are relased
@@ -67,7 +74,7 @@ Function ff_liftoff{
 		Print "eng:STAGE:" + eng:STAGE.
 		Print STAGE:NUMBER.
 		IF eng:STAGE >= STAGE:NUMBER { //Check to see if the engine is in the current Stage
-			SET MaxEngineThrust TO MaxEngineThrust + eng:MAXTHRUST. //if it has a gimbal set the gimbal limit
+			SET MaxEngineThrust TO MaxEngineThrust + eng:MAXTHRUST. 
 			Print "Engine Thrust:" + MaxEngineThrust. 
 		}
 	}
@@ -117,7 +124,7 @@ Function ff_liftoffclimb{
 ///This gravity turn tries to hold the AoA to a predefined value
 // Credit: Own recreated from ideas in mix of general
 Function ff_GravityTurnAoA{	
-	PARAMETER AoATarget is 0.0, Flametime is 1.0, Kp is 0.15, Ki is 0.35, Kd is 0.7, PID_Min is -0.1, PID_Max is 0.1. 
+	PARAMETER AoATarget is 0.0, ullage is "RCS", Flametime is 1.0, EndFunc is 0.05, Kp is 0.15, Ki is 0.35, Kd is 0.7, PID_Min is -0.1, PID_Max is 0.1. 
 	// General rule of thumb, set first stage dV to around 1700 - 1900 for Kerbin. Set the target AoA to (-(TWR^2))+1 ie. 1.51 = -1.25	
 	Set dPitch to 0.
 	Set MaxQ to 0.
@@ -130,8 +137,8 @@ Function ff_GravityTurnAoA{
 	Set StartLogtime to TIME:SECONDS.
 	//Log "# Time, # grav pitch, # AoA, # dPitch, # PTerm , # ITerm , # DTerm" to AOA.csv.
 	
-	UNTIL (SHIP:Q < MaxQ*0.05) {  //TODO: this will need to change so it is not hard set.
-		Set Angles to Flight["Angles"]().
+	UNTIL (SHIP:Q < MaxQ*EndFunc) {  //TODO: this will need to change so it is not hard set.
+		Set Angles to ff_Angles().
 		Set angofAttack to Angles["aoa"].
 
 		SET dPitch TO PIDAngle:UPDATE(TIME:SECONDS,angofAttack).
@@ -142,19 +149,20 @@ Function ff_GravityTurnAoA{
 			Set MaxQ to SHIP:Q.
 		}
 		Clearscreen.
-		Util_Engine["Flameout"]().
-		Util_Vessel["FAIRING"]().
-		Util_Vessel["COMMS"]().
+		ff_Flameout(ullage).
+		ff_FAIRING().
+		ff_COMMS().
 		Print "AOA: "+ angofAttack.
+		Print "AOA tgt: "+ AoATarget.
 		Print "Delta Pitch: "+(dPitch).
 		Print "Setpoint Pitch: "+(gravPitch).
 		Print "Q: "+(SHIP:Q).
 		Print "Max Q: "+(MaxQ).
 		Print "Stage: "+(STAGE:NUMBER).
-		Print "TWR: "+(gl_TWR).
-		Print "TWRTarget: "+(gl_TWRTarget).
+		Print "TWR: "+(gl_TWR()).
+		Print "TWRTarget: "+(gl_TWRTarget()).
 		Print "Max G: "+(sv_maxGeeTarget).
-		Print "Throttle Setting: "+(gl_TVALMax).
+		Print "Throttle Setting: "+(gl_TVALMax()).
 		Print PIDAngle:PTerm. //For determining the Correct PID Values
 		Print PIDAngle:ITerm. //For determining the Correct PID Values
 		Print PIDAngle:DTerm. //For determining the Correct PID Values
@@ -172,7 +180,7 @@ Function ff_GravityTurnAoA{
 //This gravity turn is a work in progress however it it intended to follow a predefined path based on the ratio of atmospheric pressure  
 // Credit: Own recreated from ideas in mix of general	
 Function ff_GravityTurnPres{
-	PARAMETER PresMultiple is 1.0.	
+	PARAMETER PresMultiple is 0.25, ullage is "RCS".
 	
 	Set MaxQ to 0.
 	Set intPitch to sv_anglePitchover.	///Intital setup
@@ -180,29 +188,42 @@ Function ff_GravityTurnPres{
 	SET ATMPGround TO SHIP:SENSORS:PRES.
 	
 	LOCK atmp to ship:sensors:pres.
-	LOCK atmoDensity to atmp / atmpGround.
+	LOCK atmoDensity to (atmp / atmpGround) ^ PresMultiple.
 
 	LOCK currPitch to (intPitch * atmoDensity).
 	LOCK STEERING to HEADING(sv_intAzimith, currPitch).
 	UNTIL SHIP:Apoapsis > sv_targetAltitude {
-		Util_Engine["Flameout"]().
-		Util_Vessel["FAIRING"]().
-		Util_Vessel["COMMS"]().
+		Clearscreen.
+		Print "Pitch: " + currPitch.
+		Print "Pressure: " + atmp.
+		Print "Pressure Ratio: " + atmoDensity.
+		ff_Flameout(ullage).
+		ff_FAIRING().
+		ff_COMMS().
 	}
+	wait 0.001.
+	LOCK STEERING TO ship:facing:vector.
 	UNLOCK currPitch.
 	UNLOCK atmoDensity.
 	UNLOCK atmp.
+	LOCK Throttle to 0.
+	RCS on.
+
+	
 
 } // End of Function
 
 /////////////////////////////////////////////////////////////////////////////////////
 // Credit: Own recreated from ideas in mix of general	
 Function ff_Coast{ // intended to keep a low AoA and burn then coast to Ap allowing another function (hill climb in this case) to calculate the insertion burn
+	Parameter ullage is "RCS".
 	Print "Coasting Phase".
 	LOCK STEERING TO ship:facing:vector. //maintain current alignment
+	RCS on.
 	UNTIL SHIP:Apoapsis > sv_targetAltitude {
-		Util_Vessel["FAIRING"]().
-		Util_Vessel["COMMS"]().
+		ff_Flameout(ullage).
+		ff_FAIRING().
+		ff_COMMS().
 	}
 	LOCK Throttle to 0.
 
@@ -211,7 +232,7 @@ Function ff_Coast{ // intended to keep a low AoA and burn then coast to Ap allow
 /////////////////////////////////////////////////////////////////////////////////////
 // Credit: Own recreated from ideas in mix of general
 Function ff_InsertionPIDSpeed{ // PID Code stepping time to Apo. Note this can only attempt to launch into a circular orbit
-PARAMETER 	ApTarget, Kp is 0.3, Ki is 0.0002, Kd is 12, PID_Min is -0.1, PID_Max is 0.1, 
+PARAMETER 	ApTarget, ullage is "RCS", Kp is 0.3, Ki is 0.0002, Kd is 12, PID_Min is -0.1, PID_Max is 0.1, 
 			vKp is -0.01, vKi is 0.0002, vKd is 12, vPID_Min is -10, vPID_Max is 1000.
 	
 	//TODOD: Find out the desired velocity of the AP Target and make this the desired velocity and have the loop cut out when the desired velocity is reached.
@@ -226,9 +247,9 @@ PARAMETER 	ApTarget, Kp is 0.3, Ki is 0.0002, Kd is 12, PID_Min is -0.1, PID_Max
 		
 	
 	UNTIL ((SHIP:APOAPSIS > sv_targetAltitude) And (SHIP:PERIAPSIS > sv_targetAltitude))  OR (SHIP:APOAPSIS > sv_targetAltitude*1.1){
-		Util_Engine["Flameout"]().
-		Util_Vessel["FAIRING"]().
-		Util_Vessel["COMMS"]().
+		ff_Flameout(ullage).
+		ff_FAIRING().
+		ff_COMMS().
 		
 		Set PIDALT:KP to vKp/((ship:maxthrust/ship:mass)^2). //adjust the kp values and therefore desired vertical speed based on the TWR^2
 		
@@ -276,7 +297,7 @@ parameter tgt_pe. //target periapsis
 parameter tgt_ap. //target apoapsis
 parameter tgt_inc. //target inclination
 parameter u is 0. // target true anomaly in degrees(0 = insertion at Pe)
-
+parameter ullage is "RCS".
     
     set ra to body:radius + tgt_ap. //full Ap
     set rp to body:radius + tgt_pe. //full pe
@@ -375,7 +396,7 @@ parameter u is 0. // target true anomaly in degrees(0 = insertion at Pe)
 			If Util_Vessel["Tol"](orbit:inclination, tgt_inc, 0.1){
 				LOCK STEERING TO heading(ship:heading, s_pitch).
 			}Else{
-				LOCK STEERING TO heading(Util_Launch["FlightAzimuth"](tgt_inc, tgt_vx), s_pitch).
+				LOCK STEERING TO heading(ff_FlightAzimuth(tgt_inc, tgt_vx), s_pitch).
 			}
 			ClearScreen.
 			Print "closed loop Steering".
@@ -433,7 +454,7 @@ function hf_peg_cycle {
 	parameter s_r.
 	parameter s_acc.
     
-	local s_ve is Util_Engine["Vel_Exhaust"]().
+	local s_ve is ff_Vel_Exhaust().
     
 	///if first time through get inital A and B values
     if A = 0 and B = 0 {
@@ -503,7 +524,7 @@ function hf_peg_cycle {
         set A to ab[0].
         set B to ab[1].
     } else {
-        Print("terminal guidance enabled").
+        Print ("terminal guidance enabled").
         set A to A_dash.
         set B to B_dash.
     }
@@ -515,7 +536,7 @@ function hf_peg_cycle {
 // Credits: Same as ff_InsertionPEG
 
 // Estimate, returns A and B coefficient for guidance
-declare function hf_peg_solve {
+function hf_peg_solve {
     parameter T.//Estimated time until burnout
     parameter tau. // tau = ve/a which is the time to burn the vehicle completely if it were all propellant
 	parameter tgt_vy.
@@ -523,7 +544,7 @@ declare function hf_peg_solve {
 	parameter s_vy.
 	parameter s_r.
 	
-	local s_ve is Util_Engine["Vel_Exhaust"]().
+	local s_ve is ff_Vel_Exhaust().
 
     local b0 is -s_ve * ln(1 - (T/tau)). //Wiki eq 7a
     local b1 is (b0*tau) - (s_ve*T). //Wiki eq 7b
@@ -543,9 +564,4 @@ declare function hf_peg_solve {
 	Print "B " + B.
     return list(A, B).
 }
-///////////////////////////////////////////////////////////////////////////////////
-//Export list of functions that can be called externally for the mission file	to use
-/////////////////////////////////////////////////////////////////////////////////////
-	
-    export(launch_atm).
-} // End of anon
+
