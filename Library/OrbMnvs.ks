@@ -43,7 +43,7 @@ FOR file IN LIST(
 //TODO look at the hill climb stuff once a PEG ascent program is completed.	
 	Function ff_Circ {
 	//TODO: Change to work with negative inclinations.
-	Print "Creating Circularisation checking in space".
+	Print "Creating Circularisation, checking to see if vessel is in space".
 	Parameter APSIS is "per", EccTarget is 0.005, int_Warp is false, IncTar is 1000.
 		if runMode:haskey("ff_Node_exec") {
 			ff_Node_exec(int_Warp).		
@@ -54,7 +54,13 @@ FOR file IN LIST(
 			}
 			Print "Ecentricity:" + SHIP:ORBIT:ECCENTRICITY.
 			If APSIS="per" or obt:transition = "ESCAPE"{ // this either take the variable or overides the varible if the orbit is an escape trajectory to ensure it is performed at the periapsis
-				set Cirdv to ff_CircOrbitVel((ship:orbit:periapsis) - ff_EccOrbitVel(ship:orbit:periapsis, ship:orbit:semimajoraxis)).
+				if ship:orbit:semimajoraxis > 0 {
+					set Cirdv to ff_CircOrbitVel((ship:orbit:periapsis) - ff_EccOrbitVel(ship:orbit:periapsis, ship:orbit:semimajoraxis)).
+				}
+				Else{
+					Print "Escape Trajectory Detected".
+					set Cirdv to ff_EccOrbitVel(ship:orbit:periapsis, ship:orbit:semimajoraxis) - ff_CircOrbitVel(ship:orbit:periapsis).
+				}
 				Print "Seeking Per Circ".
 				Print "Min Dv Required:"+ Cirdv.
 				If IncTar = 1000{
@@ -63,7 +69,7 @@ FOR file IN LIST(
 				}
 				Else{
 			// use the following in the future to also conduct a change of inclination at the same time
-					ff_Seek(ff_freeze(time:seconds + ETA:PERIAPSIS), ff_freeze(0), 0, Cirdv, 
+					ff_Seek_low(ff_freeze(time:seconds + ETA:PERIAPSIS), ff_freeze(0), 0, Cirdv, 
 						{ 	parameter mnv. 
 							return -mnv:orbit:eccentricity - (abs(IncTar-mnv:orbit:inclination)/2).
 						}//needs to be changed to deal with negative inclinations
@@ -81,7 +87,7 @@ FOR file IN LIST(
 				}
 				Else{
 			// use the following in the future to also conduct a change of inclination at the same time
-					ff_Seek(ff_freeze(time:seconds + ETA:APOAPSIS), ff_freeze(0), 0, Cirdv, 
+					ff_Seek_low(ff_freeze(time:seconds + ETA:APOAPSIS), ff_freeze(0), 0, Cirdv, 
 						{ 	parameter mnv. 
 							return -mnv:orbit:eccentricity - (abs(IncTar-mnv:orbit:inclination)/2).
 						} //needs to be changed to deal with negative inclinations
@@ -112,7 +118,7 @@ FOR file IN LIST(
 			}
 			Else{
 			// use the following in the future to also conduct a change of inclination at the same time
-				ff_Seek(ff_freeze(time:seconds + ETA:APOAPSIS), ff_freeze(0), 0, Edv, 
+				ff_Seek_low(ff_freeze(time:seconds + ETA:APOAPSIS), ff_freeze(0), 0, Edv, 
 					{ 	parameter mnv. 
 						if ff_tol(mnv:orbit:periapsis, Target_Perapsis , Target_Tolerance) return 0. 
 						return -(abs(Target_Perapsis-mnv:orbit:periapsis) / Target_Perapsis)- (abs(IncTar-mnv:orbit:inclination)/2). 
@@ -142,7 +148,7 @@ FOR file IN LIST(
 			}
 			Else{
 			// use the following in the future to also conduct a change of inclination at the same time
-				ff_Seek(Hill_Climb["freeze"](time:seconds + ETA:PERIAPSIS), ff_freeze(0), 0, Edv, 
+				ff_Seek_low(Hill_Climb["freeze"](time:seconds + ETA:PERIAPSIS), ff_freeze(0), 0, Edv, 
 					{ 	parameter mnv. 
 						if ff_tol(mnv:orbit:apoapsis, Target_Apoapsis , Target_Tolerance) return 0. 
 						return -(abs(Target_Apoapsis-mnv:orbit:Apoapsis) / Target_Apoapsis)- (abs(IncTar-mnv:orbit:inclination)/2). 
@@ -170,7 +176,7 @@ FOR file IN LIST(
 			Print Target_Apoapsis.
 			Print Target_Perapsis.
 			Print StartingTime.
-			ff_Seek(
+			ff_Seek_low(
 				ff_freeze(StartingTime), 0, ff_freeze(0), 0, { 
 					parameter mnv. 
 					if ff_tol(mnv:orbit:apoapsis, Target_Apoapsis , Target_Tolerance) 
@@ -192,7 +198,7 @@ FOR file IN LIST(
 		} //end runModehaskey if
 		Else {
 			Print "Adusting inc".
-			ff_Seek(
+			ff_Seek_low(
 				Hill_Climb["freeze"](time:seconds + ETA:APOAPSIS), ff_freeze(0), 0, ff_freeze(0), { parameter mnv. return -abs(mnv:orbit:inclination - Target_Inc). }
 			).
 			ff_Node_exec(int_Warp).
@@ -210,7 +216,7 @@ FOR file IN LIST(
 		Else{
 			Print "Adusting inc plane".
 			Local UT is ff_Find_AN_UT(target_Body).
-			ff_Seek(
+			ff_Seek_low(
 				ff_freeze(UT), 0, 0, 0, { 
 					parameter mnv. 
 					if ff_tol((mnv:orbit:inclination - target_Body:orbit:inclination), Target_Inc, Target_Tolerance){

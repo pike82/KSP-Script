@@ -39,6 +39,7 @@ FOR file IN LIST(
 			wait 0.001.
 		}
 	Lock Throttle to 0.0.
+	Print "De-orbit height reached".
 	}// End Function
 
 ///////////////////////////////////////////////////////////////////////////////////	
@@ -120,7 +121,7 @@ FOR file IN LIST(
 ///////////////////////////////////////////////////////////////////////////////////	
 
 	Function ff_Reentry{
-	Parameter exit_alt is 15000, maxspeed is 15000, minspeed is 400.
+	Parameter exit_alt is 15000, maxspeed is 1500, minspeed is 400.
 		Lock Throttle to 0.0.
 		RCS on.
 		lock steering to ship:retrograde.
@@ -140,7 +141,7 @@ FOR file IN LIST(
 ///////////////////////////////////////////////////////////////////////////////////	
 	
 	Function ff_ParaLand{
-	Parameter dep_Alt is 2000.
+	Parameter dep_Alt is 20000.
 	Print (gl_baseALTRADAR()).
 	//Util_Vessel["R_chutes"]("arm parachute").
 	//Util_Vessel["R_chutes"]("disarm parachute").

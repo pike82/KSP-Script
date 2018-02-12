@@ -2,15 +2,10 @@
 //Generic Boot Script for all vessels
 ////////////////////////////////
 
-//Boot Script Functions are:
-//Handles moves between runModes by storing current runmode in Jason file
-//Loading the KNU file which manages function calls from the mission file.
-//Checking for and downloading new and updated mission file(s)
-//Handling on screen notification messages
-
 @LAZYGLOBAL OFF. //Turns off auto global call of parameters and prevents verbose errors where calling recursive functions
 
-WAIT 2. //ensures all game physiscs have loaded
+WAIT UNTIL SHIP:UNPACKED.
+WAIT 1. //ensures all game physiscs have loaded
 Print "Running Bootscript".
 
 // open up the KOS terminal
@@ -44,7 +39,6 @@ else {
 	gf_set_BootCache(TIME:SECONDS). // create the bootlast file
 	Print "BootLast time created and set to:" + BootLast.
 }
-
 
 If bootLast < TIME:SECONDS - 30{
 	/// the CPU has not been rebooted for a while and likley needs to have the cache cleared
@@ -84,7 +78,7 @@ ON AG10 {
 
 //The following is used to check for multi CPU boot file uploads.
 Local Inbox is ff_CPU_Rcv_Msg().
-If Inbox[1] = vessel(SHIP:Name){ // check for any mssages from inital core
+If Inbox[1] = vessel(SHIP:Name){ // check for any messages from primary core
 	Local Str is Inbox[0].
 	local EndDot is Str:FINDLAST(".").// this assumes that the sub cores have a "." at the end and everything before the "." is the name of mission file to be run.
 	Set CORE:Part:Tag To Str. 
@@ -95,8 +89,9 @@ If Inbox[1] = vessel(SHIP:Name){ // check for any mssages from inital core
 	Print "Getting Missions Names for sub cores".
 	Global newMission is Str:SUBSTRING(0, EndDot) + ".mission".
 	Global newUpdate is Str:SUBSTRING(0, EndDot) + ".update".
+	
 } Else{
-	//Mission Files set up for first or sungle core
+	//Mission Files set up for first or single core
 	Print "Getting Missions Names for Primary Core".
 	Global newMission is SHIP:Name + ".mission".
 	Global newUpdate is SHIP:Name + ".update".
@@ -104,13 +99,13 @@ If Inbox[1] = vessel(SHIP:Name){ // check for any mssages from inital core
 	gf_killthrottle(). // ensures no active throttle unless specified later
 }
 
-// Check connection and ensure a mission file and Knu file is present in the first boot up.
+// Check connection and ensure a mission file is present in the first boot up.
 IF ADDONS:RT:HASKSCCONNECTION(SHIP) or ADDONS:AVAILABLE("RT")=False {  //See if there is a connection
 	Print ("==INITIALISATION FILE CHECKS==").
 	Print ("Checking for mission file").
 	gf_checkUpdate().
 	If not exists ("Mission"+ gv_ext) {
-		gf_Download("0:/Missions/",newMission,"Mission").
+		gf_Download("0:/Missions/", newMission, "Mission").
 	}
 }
 
@@ -118,7 +113,7 @@ IF ADDONS:RT:HASKSCCONNECTION(SHIP) or ADDONS:AVAILABLE("RT")=False {  //See if 
 RUNPATH ("1:/Mission"+ gv_ext).
 
 
-Local bootTime To TIME:SECONDS.
+Local bootTime is TIME:SECONDS.
 Print "Intial Runmode: " + Runmode:Values.
 
 Print ("==COMMENCING RUNMODE LOOP==").
@@ -144,7 +139,7 @@ until runMode["runMode"] = -1 {
 	//Print ("Run modes in boot loop").
 	If runMode["Runmode"] = 0{
 		Print "Entering Hibernation mode".
-		Unlock All. //Need to determine if this is a good idea as you will need to reset any locked values
+		//Unlock All. //Need to determine if this is a good idea as you will need to reset any locked values
 		Wait 300. //if runmode is zero enter hibernation mode and only check in every 5 minute to conserve power
 	}
     wait 0.001.
@@ -323,8 +318,10 @@ Function ff_Multi_CPU_Boot_Load{
 				Set First_boot to false.
 			}
 		}
-		Set CORE:Part:Tag To SHIP:NAME. // doen here so if the above is checked later on by a sub-core it will switch to false
+		
+		Set CORE:Part:Tag To SHIP:NAME. // done here so if the above is checked later on by a sub-core it will switch to false
 		Print "First boot: " + First_boot.
+		
 		If First_boot{
 			Local i is 1. 
 			for Processor in PROCESSOR_List {
@@ -346,6 +343,7 @@ Function ff_Multi_CPU_Boot_Load{
 			}. // end for
 			Print "Waiting for Responses".
 			Wait 5.0. // provide enough time for the other processors to load and send a response
+			
 			UNTIL CORE:MESSAGES:EMPTY{ // loop until
 				local RECEIVED is CORE:MESSAGES:POP.
 				Print RECEIVED:CONTENT.

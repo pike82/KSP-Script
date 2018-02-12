@@ -1,67 +1,39 @@
-Print ("Intilising other CPU's").
-
 Print "Old Config:IPU Setting:" + Config:IPU.
 Set Config:IPU to 1000.// this needs to be set based on the maximum number of processes happening at once, usually 500 is enought unless its going to be a very heavy script such as a suicide landing script which may require upto 1500
 Print "New Config:IPU Setting:" + Config:IPU.
 Set Config:Stat to false.
 	
-LIST PROCESSORS IN ALL_PROCESSORS.
-
-Set CORE:Part:Tag To SHIP:NAME.
-
-for Processor in ALL_PROCESSORS {
-	Print Processor:Tag.
-	If Processor:Tag:CONTAINS("Stage"){
-		SET MESSAGE TO Processor:Tag. // can be any serializable value or a primitive
-		SET P TO PROCESSOR(Processor:Tag).
-		IF P:CONNECTION:SENDMESSAGE(MESSAGE) {
-			PRINT "Message sent to Inbox Stack!".
-		}
-		//Processor:Deactivate.
-		Print Processor:Tag + " Files moved".
-		copypath("0:/Launchers/" + Processor:Tag +".ks",Processor:Tag + ":/Boot.ks").
-		copypath("0:/Library/knu.ks",Processor:Tag + ":/").
-		set processor:bootfilename to "Boot.ks". // sets the bootfile so when activated this file will run
-		Processor:Activate.
-		WAIT UNTIL NOT CORE:MESSAGES:EMPTY. // If the processor activates properly it will pick up the message sent before deactivation and send a reponse everything is working
-		SET RECEIVED TO CORE:MESSAGES:POP.
-		IF RECEIVED:CONTENT = Processor:Tag + " Rcvd" {
-			PRINT Processor:Tag + "Started".
-		} ELSE {
-		  PRINT "Unexpected message: " + RECEIVED:CONTENT.
-		}
-	}
-}.		
- wait 0.5. // ensure above mesage process has finished	
- 
- //TODO: Look at implimenting a Flight readout script like the KOS-Stuff_master gravity file for possible implimentation.
 intParameters().
 
 PRINT ("Downloading libraries").
 //download dependant libraries first
-	local Util_Vessel is import("Util_Vessel").
-	local Util_Launch is import("Util_Launch").
-	local Launch_atm is import("Launch_atm").
 
-Print gl_surfaceElevation.
-Print gl_baseALTRADAR.
-
+FOR file IN LIST(
+	"Util_Launch",
+	"Launch_atm",
+	"Landing_atm",
+	"Util_Vessel"){ 
+		//Method for if to download or download again.
+		IF (not EXISTS ("1:/" + file)) or (not runMode["runMode"] = 0.1)  { //Want to ignore existing files within the first runmode.
+			gf_DOWNLOAD("0:/Library/",file,file).
+			wait 0.001.	
+		}
+		RUNPATH(file).
+	} 
 Rel_Parameters(). 	
-
-Print "debug".
 
 Function Mission_runModes{
 		
 	if runMode["runMode"] = 0.1 { 
 		Print "Run mode is:" + runMode["runMode"].
-		Launch_atm["preLaunch"]().
-		Launch_atm["liftoff"]().
+		ff_preLaunch().
+		ff_liftoff().
 		gf_set_runmode("runMode",1.1).
 	}	
 
 	else if runMode["runMode"] = 1.1 { 
 		Print "Run mode is:" + runMode["runMode"].
-		Launch_atm["liftoffclimb"]() .
+		ff_liftoffclimb().
 		gf_set_runmode("runMode",2.1).
 	}	
 	
@@ -70,11 +42,9 @@ Function Mission_runModes{
 		until gl_baseALTRADAR > 30000 or ship:VERTICALSPEED < 0{
 			Wait 0.1.
 		}
-		Util_Vessel["collect_science"]().
-		until gl_baseALTRADAR < 6000 and ship:VERTICALSPEED < 0{
-			Wait 0.1.
-		}
-		Util_Vessel["R_chutes"]("arm parachute").
+		//ff_collect_science().
+		ff_science().
+		ff_R_chutes().
 		gf_set_runmode("runMode",3.1).
 		wait 100.
 	}	
@@ -84,19 +54,19 @@ Function intParameters {
 	///////////////////////
 	//Ship Particualrs
 	//////////////////////
-	Global sv_maxGeeTarget to 4.  //max G force to be experienced
+	Global sv_maxGeeTarget to 4.5.  //max G force to be experienced
 
 	Global sv_shipHeightflight to 4.1. // the height of the ship from the ground to the ship base part
-	Global sv_gimbalLimit to 10. //Percent limit on the Gimbal is (10% is typical to prevent vibration however may need higher for large rockets with poor control up high)
+	Global sv_gimbalLimit to 100. //Percent limit on the Gimbal is (10% is typical to prevent vibration however may need higher for large rockets with poor control up high)
 	Global sv_MaxQLimit to 0.3. //0.3 is the Equivalent of 40Kpa Shuttle was 30kps and others like mercury were 40kPa.
 	
 	///////////////////////
 	//Ship Variable Inital Launch Parameters
 	///////////////////////
  	Global sv_targetInclination to 0. //Desired Inclination
-    Global sv_targetAltitude to 85000. //Desired Orbit Altitude from Sea Level
+    Global sv_targetAltitude to 770000. //Desired Orbit Altitude from Sea Level
     Global sv_ClearanceHeight to 200. //Intital Climb to Clear the Tower and start Pitchover Maneuver
-    Global sv_anglePitchover to 86. //Final Pitchover angle
+    Global sv_anglePitchover to 82. //Final Pitchover angle
 	Global sv_landingtargetLATLNG to latlng(-0.0972092543643722, -74.557706433623). // This is for KSC but use target:geoposition if there is a specific target vessel on the surface that can be used.
 	Global sv_prevMaxThrust to 0. //used to set up for the flameout function
 	
@@ -140,16 +110,17 @@ Function intParameters {
 }/////End of function
 
 Function Rel_Parameters {
-
-	Global sv_intAzimith TO Util_Launch ["LaunchAzimuth"](sv_targetInclination,sv_targetAltitude).
+	If ship:STATUS = "PRELAUNCH"{
+		global sv_intAzimith TO ff_LaunchAzimuth(sv_targetInclination,sv_targetAltitude).
+	}
 
 //Engines 
-	Lock gl_Grav to Util_Vessel["Gravity"]().
+	Lock gl_Grav to ff_Gravity().
     Lock gl_TWR to MAX( 0.001, MAXTHRUST / (ship:MASS*gl_Grav["G"])). //Provides the current thrust to weight ratio
 	Lock gl_TWRTarget to min( gl_TWR, sv_maxGeeTarget*(9.81/gl_Grav["G"])). // enables the trust to be limited based on the TWR which is dependant on the local gravity compared to normal G forces
 	Lock gl_TVALMax to min(
 							gl_TWRTarget/gl_TWR, 
-							sv_MaxQLimit / max(0.01,SHIP:Q)
+							(sv_MaxQLimit / max(0.01,SHIP:Q))^2
 							). //use this to set the Max throttle as the TWR changes with time or the ship reaches max Q for throttleable engines.
 	//Lock Throttle to gl_TVALMax. // this is the command that will need to be used in individual functions when re-setting the throttle after making the throttle zero.
 

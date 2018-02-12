@@ -123,10 +123,11 @@ Function ff_stage_delta_v {
 
 //Calculates the amount of delta v for the current stage    
 local m is ship:mass * 1000. // Starting mass (kg)
-local g is 9.81.
+local g is 9.80665.
 local engine_count is 0.
 local isp is 0. // Engine ISP (s)
 local RSS is True.
+local fuelmass is 0.
 	// obtain ISP
 	LIST engines IN engList.
 	for en in engList 
@@ -145,30 +146,33 @@ local RSS is True.
 	
 	If RSS = true{
 	//for real fuels 
-		local fuelmass is 0.
-		for res IN Stage:Resources{
-			set fuelmass to fuelmass + res:amount. // if the amount is lower set it to the new low capacity value
+		local fuels is list("LQDOXYGEN", "LQDHYDROGEN", "KEROSENE", "Aerozine50", "UDMH", "NTO", "MMH", 
+			"HTP", "IRFNA-III", "NitrousOxide", "Aniline", "Ethanol75", "LQDAMMONIA", "LQDMETHANE", 
+			"CLF3", "CLF5", "DIBORANE", "PENTABORANE", "ETHANE", "ETHYLENE", "OF2", "LQDFLUORINE", 
+			"N2F4", "FurFuryl", "UH25", "TONKA250", "TONKA500", "FLOX30", "FLOX70", "", "FLOX88", 
+			"IWFNA", "IRFNA-IV", "AK20", "AK27", "CaveaB", "MON1", "MON3", "MON10", "MON15", "MON20", "Hydyne", "TEATEB").
+
+		for res in STAGE:RESOURCES{
+			for f in fuels{
+				if f = res:NAME{
+					SET fuelMass TO fuelMass + res:DENSITY*res:AMOUNT.
+				}
+			}
 		}
-	
-		return (g * isp )* ln(ship:mass / (ship:mass - fuelmass)).
-	
-	
-		// return stage:engine:isp * ln(ship:mass / (ship:mass - (stage:LQDOXYGEN + stage:LQDHYDROGEN + 
-																// stage:KEROSENE + stage:Aerozine50 + stage:UDMH + 
-																// stage:NTO + stage:MMH + stage:HTP + stage:IRFNA-III + 
-																// stage:NitrousOxide + stage:Aniline + stage:Ethanol75 + 
-																// stage:LQDAMMONIA + stage:LQDMETHANE + stage:CLF3 + stage:CLF5 + 
-																// stage:DIBORANE + stage:PENTABORANE + stage:ETHANE + stage:ETHYLENE + 
-																// stage:OF2 + stage:LQDFLUORINE + stage:N2F4 + stage:FurFuryl + 
-																// stage:UH25 + stage:TONKA250 + stage:TONKA500 + stage:FLOX30 + 
-																// stage:FLOX70 + stage: + stage:FLOX88 + stage:IWFNA + stage:IRFNA-IV + 
-																// stage:AK20 + stage:AK27 + stage:CaveaB + stage:MON1 + stage:MON3 + 
-																// stage:MON10 + stage:MON15 + stage:MON20 + stage:Hydyne + stage:TEATEB
-																// ))).
+
 	} Else {
 	//for stock fuels
-		return (isp * g * ln(m / (m - ((stage:LIQUIDFUEL*5)+(stage:Oxidizer*5))))).
+		local fuels is list("LiquidFuel", "Oxidizer", "SolidFuel", "MonoPropellant").
+		for res in STAGE:RESOURCES{
+			for f in fuels{
+				if f = res:NAME{
+					SET fuelMass TO fuelMass + res:DENSITY*res:AMOUNT.
+				}
+			}
+		}
 	}
+	//TODO:Think about removing RCS components or making it an input term as this could be a significant proportion of the deltaV which is not used.
+	return (isp * g * ln(m / (m - fuelMass))).
 }./// End Function
 
 ///////////////////////////////////////////////////////////////////////////////////	
@@ -176,7 +180,7 @@ local RSS is True.
 	
 function ff_burn_time {
 parameter dV.
-	local g is 9.81.  // Gravitational acceleration constant used in game for Isp Calculation (m/s²)
+	local g is 9.80665.  // Gravitational acceleration constant used in game for Isp Calculation (m/s²)
 	local m is ship:mass * 1000. // Starting mass (kg)
 	local e is constant():e. // Base of natural log
 	local engine_count is 0.
@@ -205,7 +209,7 @@ parameter dV.
 //Credits: Own
 	
 function ff_mdot {
-	local g is 9.81.  // Gravitational acceleration constant used in game for Isp Calculation (m/s²)
+	local g is 9.80665.  // Gravitational acceleration constant used in game for Isp Calculation (m/s²)
 	local engine_count is 0.
 	local thrust is 0.
 	local isp is 0. // Engine ISP (s)
@@ -224,7 +228,7 @@ function ff_mdot {
 //Credits: Own	
 	
 function ff_Vel_Exhaust {
-	local g is 9.81.  // Gravitational acceleration constant used in game for Isp Calculation (m/s²)
+	local g is 9.80665.  // Gravitational acceleration constant used in game for Isp Calculation (m/s²)
 	local engine_count is 0.
 	local thrust is 0.
 	local isp is 0. // Engine ISP (s)

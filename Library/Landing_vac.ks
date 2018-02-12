@@ -359,14 +359,14 @@ PARAMETER lat.
 
   IF NOT hf_CheckInc(lat, ship:INCLINATION) { RETURN -1. } // double check the inclinations is ok
   
-  LOCAL ArgPer IS hf_mAngle(Ship:ARGUMENTOFPERIAPSIS).
-  Local Ang1 is hf_mAngle(ARCSIN((SIN(lat)/SIN(ship:INCLINATION))) - ArgPer).
+  LOCAL ArgPer IS ff_mAngle(Ship:ARGUMENTOFPERIAPSIS).
+  Local Ang1 is ff_mAngle(ARCSIN((SIN(lat)/SIN(ship:INCLINATION))) - ArgPer).
   
-  LOCAL ta_extreme_lat IS hf_mAngle(90 - ArgPer).
+  LOCAL ta_extreme_lat IS ff_mAngle(90 - ArgPer).
   IF lat < 0 { 
-	SET ta_extreme_lat TO hf_mAngle(270 - ArgPer). 
+	SET ta_extreme_lat TO ff_mAngle(270 - ArgPer). 
   }
-  Local Ang2 is hf_mAngle((2 * ta_extreme_lat) - Ang1).  
+  Local Ang2 is ff_mAngle((2 * ta_extreme_lat) - Ang1).  
   RETURN list(Ang1, Ang2).
 }
 
@@ -467,7 +467,7 @@ Parameter Pass_time.
 	LOCAL BodRotTime is Body:ROTATIONPERIOD.
 	LOCAL spot is Body:GEOPOSITIONOF(POSITIONAT(ship,pass_time)). // Get Coordinates when passing lattitude point assuming no rotation
 	LOCAL time_diff is MOD(pass_time - TIME:SECONDS, BodRotTime). // get the time until this point is reached
-	LOCAL new_lng is hf_mAngle(spot:LNG - (time_diff * 360 / BodRotTime)). // find the rotation of the body during this time and what the longatude will be.
+	LOCAL new_lng is ff_mAngle(spot:LNG - (time_diff * 360 / BodRotTime)). // find the rotation of the body during this time and what the longatude will be.
 	Return LATlNG(spot:LAT,new_lng).
 }
 

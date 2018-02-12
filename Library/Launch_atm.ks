@@ -95,7 +95,7 @@ Function ff_liftoff{
 	// Print TIME:SECONDS.
 
 	//TODO:Make and abort code incase an engine fails during the start up phase.
-	if EngineStartTime + 0.75 > TIME:SECONDS {wait 0.75.} // this ensures time between staging engines and clamps so they do not end up being caught up in the same physics tick
+	Wait until Stage:Ready . // this ensures time between staging engines and clamps so they do not end up being caught up in the same physics tick
 	STAGE. // Relase Clamps
 	PRINT "Lift off".
 	//TODO: change the lock steering to heading as the core part may not be rotated correctly. need to find a away to ensure current rotation is kept.
@@ -137,7 +137,7 @@ Function ff_GravityTurnAoA{
 	Set StartLogtime to TIME:SECONDS.
 	//Log "# Time, # grav pitch, # AoA, # dPitch, # PTerm , # ITerm , # DTerm" to AOA.csv.
 	
-	UNTIL (SHIP:Q < MaxQ*EndFunc) {  //TODO: this will need to change so it is not hard set.
+	UNTIL (SHIP:Q < MaxQ*EndFunc) {
 		Set Angles to ff_Angles().
 		Set angofAttack to Angles["aoa"].
 
@@ -163,15 +163,15 @@ Function ff_GravityTurnAoA{
 		Print "TWRTarget: "+(gl_TWRTarget()).
 		Print "Max G: "+(sv_maxGeeTarget).
 		Print "Throttle Setting: "+(gl_TVALMax()).
-		Print PIDAngle:PTerm. //For determining the Correct PID Values
-		Print PIDAngle:ITerm. //For determining the Correct PID Values
-		Print PIDAngle:DTerm. //For determining the Correct PID Values
+		//Print PIDAngle:PTerm. //For determining the Correct PID Values
+		//Print PIDAngle:ITerm. //For determining the Correct PID Values
+		//Print PIDAngle:DTerm. //For determining the Correct PID Values
 		//PID Log for tuning
 		// Switch to 0.
 		// Log (TIME:SECONDS - StartLogtime) +","+ (gravPitch) +","+(gl_AoA) +","+ (dPitch) +","+ (PIDAngle:PTerm) +","+ (PIDAngle:ITerm) +","+ (PIDAngle:DTerm) to AOA.csv.
 		// Switch to 1.
 		//End PID Log loop
-		Wait 0.05.
+		Wait 0.1.
 	}	/// End of Until
 } // End of Function
 
@@ -200,6 +200,7 @@ Function ff_GravityTurnPres{
 		ff_Flameout(ullage).
 		ff_FAIRING().
 		ff_COMMS().
+		wait 0.001.
 	}
 	wait 0.001.
 	LOCK STEERING TO ship:facing:vector.
@@ -347,7 +348,7 @@ parameter ullage is "RCS".
 	local tau is s_ve/s_acc.
 	
     local peg is hf_peg_cycle(A, B, T, peg_step, tau, tgt_vy, tgt_vx, tgt_r, s_vy, s_vx, s_r, s_acc).  // inital run through the cycle with first estimations
-    wait 0.
+    wait 0.001.
     Print "Entering Convergence loop".
 	//Loop through updating the parameters until the break condition is met
     until false {

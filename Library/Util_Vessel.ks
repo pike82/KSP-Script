@@ -47,9 +47,9 @@ FUNCTION ff_Tol {
 
 
 FUNCTION ff_COMMS {
-	PARAMETER event is "activate", stagewait IS 0.1.
+	PARAMETER event is "activate", stagewait IS 0.1, ShipQtgt is 0.0045.
 	// "deactivate"
-	IF SHIP:Q < 0.0045 {
+	IF SHIP:Q < ShipQtgt {
 		FOR antenna IN SHIP:MODULESNAMED("ModuleRTAntenna") {
 			IF antenna:HASEVENT(event) {
 				antenna:DOEVENT(event).
@@ -125,7 +125,7 @@ function ff_R_chutes_seq {
 }// End Function
 
 function ff_R_chutes {
-parameter event.
+parameter event is "arm parachute".
 
 	//["R_chutes"]("arm parachute").
 	//["R_chutes"]("disarm parachute").
@@ -226,23 +226,34 @@ function hf_transfer_science {
 }
 	
 	
-// function ff_Science
-// {
-  // parameter one_use IS TRUE, overwrite IS FALSE.
-	// local exp_list is LIST().
-	// SET exp_list to SHIP:MODULESNAMED("ModuleScienceExperiment").
-	// FOR exp IN exp_list { 
+function ff_Science
+{
+  parameter one_use IS TRUE, overwrite IS FALSE.
+	local exp_list is LIST().
+	SET exp_list to SHIP:MODULESNAMED("ModuleScienceExperiment").
+	FOR exp IN exp_list { 
 	
-		// IF NOT exp:INOPERABLE AND (exp:RERUNNABLE OR one_use) {
-			// IF exp:DEPLOYED AND overwrite { 
-				// resetMod(exp). 
-			// }
-			// IF NOT exp:DEPLOYED {   
-				// exp:DEPLOY().
-				// WAIT UNTIL exp:HASDATA. 
-			// }
-		// }
-	// }
-// }	//end function
+		IF NOT exp:INOPERABLE AND (exp:RERUNNABLE OR one_use) {
+			IF exp:DEPLOYED AND overwrite { 
+				resetMod(exp). 
+			}
+			IF NOT exp:DEPLOYED {   
+				exp:DEPLOY().
+				WAIT UNTIL exp:HASDATA. 
+			}
+		}
+	}
+}	//end function
+
+/////////////////////////////////////////
+//Credit:https://github.com/ElWanderer/kOS_scripts 
+
+FUNCTION ff_mAngle{
+PARAMETER a.
+
+  UNTIL a >= 0 { SET a TO a + 360. }
+  RETURN MOD(a,360).
+  
+}
 
 

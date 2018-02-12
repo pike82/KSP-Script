@@ -1,6 +1,4 @@
 
-{ // Start of anon
-
 //Credits: Own with utilisation of code and credits within the Hill Climb file.
 
 ///// Download Dependant libraies
@@ -42,62 +40,88 @@ FUNCTION ff_Hohmann{
 
 // Note this assumes a relatively circular oribit for both the Ship and the target.
 
-PARAMETER tgt, Curr_time, t_pe is 0, inc_tgt is 0.
-
+PARAMETER tgt, t_pe is 100000, trans_bod is Ship:BODY, inc_tgt is 0, int_Warp is false. // trans_bod should be sun for planet transfers
+	
+	Local Curr_time is time:seconds.
+	Print "Curr_time: "+ Curr_time.
 	LOCAL Ship_Orbit is ORBITAT(SHIP,Curr_time). //ORBITAT(orbitable,time) is KOS in-built function
 	LOCAL tgt_Orbit is ORBITAT(tgt,Curr_time).
-	LOCAL Ship_Bod is Ship:BODY.
 	LOCAL r1 is Ship_Orbit:SEMIMAJORAXIS.
 	LOCAL r2 is tgt_Orbit:SEMIMAJORAXIS + t_pe.
-		
-	LOCAL dvDepart is SQRT(Ship_Bod:MU/r1) * (SQRT((2*r2)/(r1+r2)) -1). // wiki Dv1 Equation
-	LOCAL dvArrive is SQRT(Ship_Bod:MU/r1) * (1- SQRT((2*r2)/(r1+r2))). // wiki Dv2 Equation
 	
+	Print Ship_Orbit. 
+	Print tgt_Orbit.
+	Print r1.
+	Print r2.
+	
+	Print trans_bod:MU.
+	
+	LOCAL dvDepart is SQRT(trans_bod:MU/r1) * (SQRT((2*r2)/(r1+r2)) -1). // wiki Dv1 Equation
+	LOCAL dvArrive is SQRT(trans_bod:MU/r1) * (1- SQRT((2*r2)/(r1+r2))). // wiki Dv2 Equation
+	Print dvDepart.
+	Print dvArrive.
+	if -dvDepart = dvArrive {
+		set dvArrive to 0. // allows for transfers within the same SOI where the dv arrive and depart are the same.
+	}
+	Print "dvArrive: " + dvArrive.
 	if r2 < r1 { 
 		SET dvDepart TO -dvDepart. // this allows for transfers to a lower orbit
 		SET dvArrive TO -dvArrive.
 	}
 	
 	local dv is dvDepart + dvArrive.
-
-	LOCAL Trans_time is CONSTANT:PI * SQRT( ((r1+r2)^3) / (8 * b:MU) ). // wiki transfer orbit time Equation
-	
-	LOCAL Tgt_travel_ang is (Trans_time  * 360 / tgt_Orbit:PERIOD). // the angle the tgt moves during the transist assuming a circular orbit
-	LOCAL desired_phi is 180 - Tgt_travel_ang. // we want to meet the target at apoapsis so the target neet to travel and end 180 degrees from where we start.
-
-	LOCAL rel_ang_Change is (360 / Ship_Orbit:PERIOD) - (360 / tgt_Orbit:PERIOD). // the degrees the tgt moves each orbit by the ship.
-
-	LOCAL ship_pos is positionat(SHIP, Curr_time). //current position of the ship
-	LOCAL tgt_pos is positionat(tgt, Curr_time). //current position of the target
+	Print "dv int:" + dv.
+	LOCAL Trans_time is CONSTANT:PI * SQRT( ((r1+r2)^3) / (8 * trans_bod:MU) ). // wiki transfer orbit time Equation
+	Print "Trans_time: "+ Trans_time.
+	Print tgt_Orbit:PERIOD.
+	LOCAL Tgt_travel_ang is (Trans_time / tgt_Orbit:PERIOD)* 360. // the angle the tgt moves during the transist assuming a circular orbit
+	Print Tgt_travel_ang.
+	LOCAL desired_phi is 180 - Tgt_travel_ang. // we want to meet the target at apoapsis so the target need to travel and end 180 degrees from where we start.
+	Print desired_phi.
+	LOCAL rel_ang_Change is (360 / Ship_Orbit:PERIOD) - (360 / tgt_Orbit:PERIOD). // the degrees the tgt moves each orbit by the ship each second.
+	Print rel_ang_Change.
+	LOCAL ship_pos is positionat(SHIP, Curr_time)-ship:body:position. //current position of the ship
+	LOCAL tgt_pos is positionat(tgt, Curr_time)-tgt:body:position. //current position of the target
 	
 	LOCAL start_phi is VANG(ship_pos,tgt_pos). // the current angle between the ship and the tgt.
+	Print start_phi.
 	
-	LOCAL ship_normal IS VCRS(velAt(SHIP,curr_time),ship_pos).// the plane of the ship
+	LOCAL ship_normal IS VCRS(VELOCITYAT(SHIP,curr_time):ORBIT,ship_pos).// the plane of the ship
 	LOCAL ship_tgt_cross IS VCRS(ship_pos,tgt_pos).//// plane of the transfer (ie. incination diference)
-
+	
+	Print ship_normal.
+	Print ship_tgt_cross.
+	
+	Print VDOT(ship_normal, ship_tgt_cross).
+	
 	if VDOT(ship_normal, ship_tgt_cross) > 0 { 
 		SET start_phi TO 360 - start_phi. 
 	} // this checks to see if the planes are pointed in the same direction or are pointed opposite to one another so it is known if ship is leading or lagging the tgt. 
 
-	LOCAL phi_delta is mAngle(start_phi - desired_phi). //this determines how far off the best phase angle is.
-	
-	//TODO:mAngle needs to be made into a standard orbit utility function
-	
+	LOCAL phi_delta is ff_mAngle(start_phi - desired_phi). //this determines how far off the best phase angle is.
+	Print "phi_delta: " + phi_delta.
 	if rel_ang_Change < 0 { 
 		SET phi_delta TO phi_delta - 360. //adjust for negative angle change values
 	}
+	Print rel_ang_Change.
+	Print (phi_delta / rel_ang_Change).
+	Print Curr_time.
+	Local node_time is Curr_time + (phi_delta / rel_ang_Change).
+	Print node_time.
+	LOCAL first_est is NODE(node_time, 0, 0, dv). // this creates the node (best refined by a hill climb) which can be used to gain a good first approximation of the time required to speed up the solution.
+	wait 1.0.
+	Print "Node time: " + node_time.
+	Print "DV: " + dv.
+	Wait 5.
 	
-	LOCAL first_est is NODE(u_time + (phi_delta / rel_ang_Change), 0, 0, dv). // this creates the node (best refined by a hill climb) which can be used to gain a good first approximation of the time required to speed up the solution.
 	
 	if runMode:haskey("ff_Node_exec") {
 		ff_Node_exec(int_Warp).		
 	} //end runModehaskey if
 	Else{	
-		hf_seek_SOI(tgt, t_pe, inc_tgt, dv*1.2, u_time + (phi_delta / rel_ang_Change), 0, 0, dv).
+		hf_seek_SOI(tgt, t_pe, inc_tgt, dv*1.2, Curr_time + (phi_delta / rel_ang_Change), 0, 0, dv).
 		ff_Node_exec(int_Warp).
 	} //end else
-
-	return final_node.
 }
 
 Function ff_BodyTransfer {	
@@ -116,7 +140,7 @@ Parameter target_Body, Target_Perapsis, maxDV is 1000, IncTar is 90, int_Warp is
 //Credits: Own
 	
 Function ff_CraftTransfer {	
-	Parameter target_ves, Target_dist, Max_orbits, int_Warp is False. // note the target name does not need to be sourrounded by quotations
+	Parameter target_ves, Target_dist, Max_orbits, int_Warp is False. // note the target name does not need to be surrounded by quotations
 	if runMode:haskey("ff_Node_exec") {
 		ff_Node_exec(int_Warp).		
 	} //end runModehaskey if
@@ -132,7 +156,7 @@ Function ff_CraftTransfer {
 	}//end if
 	If runMode["ff_CraftTransfer"] = 2{
 		if time:seconds < runMode["ff_CraftTransferBurn"]{
-			//Checks to see if this node has been completed in the first if statement. If so skip this step and just remove the runmodes.
+			//Checks to see if this node has been completed in the first if statement to allow a follow up midc ousrse burn. If so skip this step and just remove the runmodes.
 			hf_TransferRV(target_ves, Target_dist, runMode["ff_CraftTransferBurn"], int_Warp).
 			gf_remove_runmode("ff_CraftTransferBurn").
 			ff_Node_exec(int_Warp).
@@ -149,7 +173,8 @@ Function ff_CraftTransfer {
 function hf_seek_SOI {
 	parameter target_body, target_periapsis, IncTar, maxDV,
 		  start_time is time:seconds + 600, r is 0, n is 0, p is 0. 
-	local data is ff_Seek (
+		  Print "Seeking SOI".
+	local data is ff_Seek_low (
 		start_time, r, n, p, 
 		{  
 		parameter mnv.
@@ -163,14 +188,16 @@ function hf_seek_SOI {
 			). // seeks out the closest approach from the mnv node created
 		} //end seek parameter
 	). //stores the results as a data set enabling a search within another search. This Level is the inner search
-
-	return ff_Seek(
+	Print "SOI Found Refining solution".
+	return ff_Seek_low(
 		data[0], data[1], data[2], data[3], 
 		{
 		parameter mnv.
 		if not hf_transfers_to(mnv:orbit, target_body) return -2^64. // failure to be within the SOI make score really low
 		if (mnv:DELTAV:mag > maxDV) return -2^64. // failure to be under max dv make score really low
-		return -(abs(mnv:orbit:nextpatch:periapsis - target_periapsis*1000))-(mnv:DELTAV:mag*100)-(abs(mnv:orbit:inclination-IncTar)*10).// 1000m = 10m/s = 1 degree of inclination
+		//Print "Per: " + (mnv:orbit:nextpatch:periapsis - target_periapsis).
+		//Print "Inc: " +(mnv:orbit:nextpatch:inclination-IncTar).
+		return -(abs((mnv:orbit:nextpatch:periapsis - target_periapsis)*1000))-(mnv:DELTAV:mag*100)-(abs(mnv:orbit:nextpatch:inclination-IncTar)*10).// 1000m = 10m/s = 1 degree of inclination
 		} //end seek parameter
 	). // this level is the outter search and uses the data parameter to do internal searches per step
 
@@ -434,10 +461,12 @@ until (end_time - start_time < 0.1) or middle_slope < 0.1 {
   set middle_time to (start_time + end_time) / 2.
   //Print "middle_time" + middle_time.
   set middle_slope to hf_slope_at(target_body, middle_time).
-  Print "middle_slope" + middle_slope.
+  //Print "middle_slope" + middle_slope.
   //Wait 1.0.
 }
-return hf_separation_at(target_body, middle_time).
+local Sep is hf_separation_at(target_body, middle_time).
+Print "Seperation is: " + Sep.
+return Sep.
 }/// End Function
 
 ///////////////////////////////////////////////////////////////////////////////////		  
@@ -533,12 +562,7 @@ Parameter lower_val, higher_val.
 	}
 } // End Function
 
-///////////////////////////////////////////////////////////////////////////////////
-//Export list of functions that can be called externally for the mission file	to use
-/////////////////////////////////////////////////////////////////////////////////////
-	
-  export(ORBRV).
-} // End of anon
+
 
 
 
