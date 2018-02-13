@@ -60,6 +60,9 @@ FOR file IN LIST(
 				Else{
 					Print "Escape Trajectory Detected".
 					set Cirdv to ff_EccOrbitVel(ship:orbit:periapsis, ship:orbit:semimajoraxis) - ff_CircOrbitVel(ship:orbit:periapsis).
+					If Cirdv > 0{
+						set Cirdv to -Cirdv. //ensures that a capture div is obtain regardless of approach.
+					}
 				}
 				Print "Seeking Per Circ".
 				Print "Min Dv Required:"+ Cirdv.
@@ -216,9 +219,11 @@ FOR file IN LIST(
 		Else{
 			Print "Adusting inc plane".
 			Local UT is ff_Find_AN_UT(target_Body).
+		
+			Wait 10.
 			ff_Seek_low(
 				ff_freeze(UT), 0, 0, 0, { 
-					parameter mnv. 
+					parameter mnv. 				
 					if ff_tol((mnv:orbit:inclination - target_Body:orbit:inclination), Target_Inc, Target_Tolerance){
 						return
 						- (mnv:DELTAV:mag) 
@@ -230,11 +235,26 @@ FOR file IN LIST(
 						-(abs(Target_Inc - (mnv:orbit:inclination - target_Body:orbit:inclination))*1000000)
 						- (mnv:DELTAV:mag) 
 						- abs(ship:orbit:apoapsis-mnv:orbit:apoapsis) 
-						- abs(ship:orbit:periapsis - mnv:orbit:periapsis). 
+						- abs(ship:orbit:periapsis - mnv:orbit:periapsis).
 					}
 				}
 				, True
 			).
+			wait 10.
+			
+			Print "tgt LAN " + target_Body:orbit:LAN.
+			Print "Ship LAN " + Ship:orbit:LAN.
+			Print "Check LAN Diff".
+			Print mod(720 + target_Body:orbit:LAN + Ship:orbit:LAN,360).
+			If mod(720 + target_Body:orbit:LAN + Ship:orbit:LAN,360) < 90 or mod(720 + target_Body:orbit:LAN + Ship:orbit:LAN,360) > 270{
+				local oldnode is nextnode.
+				local newnode is node(time:seconds + oldnode:ETA, oldnode:RADIALOUT, oldnode:NORMAL, -oldnode:PROGRADE).
+				Remove nextnode.
+				Add newnode.
+				Print "Normal Burn inversed".
+			}
+			
+			wait 10.
 			ff_Node_exec(int_Warp).
 		} //end else
 	}	/// End Function

@@ -69,6 +69,14 @@ FUNCTION ff_FLAMEOUT {
 		//All engines required have flamed out
 			STAGE. //Decouple half stage
 			PRINT "Releasing boosters".
+			Wait 0.1.
+			Print "Removing throttle limits".
+			FOR eng IN engList {  //Loops through Engines in the Vessel
+				IF eng:STAGE >= STAGE:NUMBER { //Check to see if the engine is in the current Stage
+						SET eng:THRUSTLIMIT to 100. // Throttle up any throttle limited engines now we have less thrusters 
+				}
+			}
+			
 		}
 	}
 	

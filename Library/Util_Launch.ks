@@ -109,25 +109,25 @@ Parameter target , ascendLongDiff is 0.2.
 		Print "Latitude unable to allow normal Launch to inclination!!!".
 	}
 	else{// A normal launch is possible with the target passing overhead.
-		set offset to hf_tricalc().
+		set offset to hf_tricalc(target).
 		set incDiff to 0.
 	}
 	
 	local diffPlaneAng is 1000. //Set higher than the max inclination so it enters the loop
 	until diffPlaneAng < incDiff + ascendLongDiff{
-		if diffPlaneAng > 30{
+		if diffPlaneAng > 10{
+			set warp to 5.
+		}
+		else if diffPlaneAng < 10 and diffPlaneAng > incDiff + 3{
 			set warp to 4.
 		}
-		else if diffPlaneAng < 50 and diffPlaneAng > incDiff + 6{
-			set warp to 4.
-		}
-		else if diffPlaneAng <incDiff +6 and diffPlaneAng > incDiff + 1.5{
+		else if diffPlaneAng <incDiff +3 and diffPlaneAng > incDiff + 1.0{
 			set warp to 3.
 		}
-		else if diffPlaneAng <incDiff +1.5 and diffPlaneAng > incDiff + 1.0{
+		else if diffPlaneAng <incDiff +1.0 and diffPlaneAng > incDiff + 0.5{
 			set warp to 2.
 		}
-		else if diffPlaneAng <incDiff +1.0 and diffPlaneAng > incDiff + 0.2{
+		else if diffPlaneAng <incDiff +0.5 and diffPlaneAng > incDiff + 0.2{
 			set warp to 1.
 		}
 		if IncPoss = False {
@@ -139,11 +139,11 @@ Parameter target , ascendLongDiff is 0.2.
 			set diffPlaneAng to abs((shiplon + offset) - DeltaLAN).
 			print "Relative LAN to Target: " + diffPlaneAng.
 		}
-		wait .001.
+		wait 1.
 	}
 	set warp to 0.
 	wait 5.
-	return.
+	return vang(hf_normalvector(ship),hf_normalvector(target)).
 }
 
 ////////////////////////////////////////////////////////////////
@@ -154,6 +154,7 @@ Parameter target , ascendLongDiff is 0.2.
 
 
 function hf_tricalc{
+	Parameter target.
 	local a is latitude.
 	local alpha is target:orbit:inclination.
 	local b is 0.

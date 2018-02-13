@@ -46,6 +46,36 @@ FOR file IN LIST(
 	
 	Function ff_SD_Burn{
 
+		// Set gr to ((body:mu/((tgtPERad-VerDist)^2)) - ((Horzvel^2)/(tgtPERad-VerDist))). //portion of vehicle acceleration used to counteract gravity as per PEG ascent guidance formula in one second
+		
+		
+		
+		
+		// until Horzvel <= EndHorzVel {//run the iteration until the ground velocity is 0 or another value if specified
+			// Set VerVelStart to VerVel.
+			// Set StartMass to StartMass - ff_mdot().
+			// Set acc to (ship:availablethrust* 1000)/(StartMass). //the acceleration of the ship in one second
+			// Set VertAccel to ((body:mu/((tgtPERad-VerDist)^2)) - ((Horzvel^2)/(tgtPERad-VerDist))). //portion of vehicle acceleration used to counteract gravity as per PEG ascent guidance formula in one second
+			// Set VerVel to VerVelStart - abs(VertAccel). // current vertical velocity.
+			// Set VerDist to VerDist - ((VerVelStart + VerVel)/2).
+			// Set Horzvel to Horzvel - abs(acc).
+			// Set dist to dist + Horzvel.
+			// Set profiletime to profiletime + 1.
+			// Clearscreen.
+			// Print acc.
+			// Print VertAccel.
+			// Print Horzvel.
+			// Print VerDist.
+			// Print VerVel.
+			// Print dist.
+			// Print profiletime. // note this is the worst case burn time if a CAB needs to be performed. //Ideally it will be shorter.
+			// wait 0.001.
+		// } // note this estimates based ona CAB which is the worst case senario, but in reality it should be able to burn for less time than estimated.
+	
+		
+		
+		
+		
 	Lock gr to (ship:orbit:body:mu/ship:obt:body:radius^2)-(ship:orbit:body:mu/((ship:body:atm:height+ship:body:radius)^2)). // avg accelaration experienced
 	Set R_min to ship:orbit:periapsis + ship:obt:body:radius.
 	Set Sdv to ff_stage_delta_v().

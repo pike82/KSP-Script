@@ -94,7 +94,7 @@ Function ff_Find_AN_INFO { // returns parameters related to the ascending node o
 	
 }/// End Function
 
-Function ff_Find_AN_UT { // Finds the time to the ascending node of the current vessel and a target vessel.
+Function ff_Find_AN_UT { // Finds the time to the ascending node of the current vessel and a target vessel/moon.
 //TODO: Remove redundant code relating to sector adjustment once fully tested.
 //TODO: Remove redundant code relating to Ship TA and AN Eccetric anomoly and Mean anomoly once the time to PE code is fully tested.
 //TODO: Remove redundant array call from AN info.
@@ -131,29 +131,35 @@ Function ff_Find_AN_UT { // Finds the time to the ascending node of the current 
 	Set AN_time_From_PE to ff_TAtimeFromPE(AN_True_Anom,Ship_e).
 	Print "AN_time_From_PE: " + AN_time_From_PE.
 	
-	Set AN_time to ship_eta_PE + AN_time_From_PE.
+	local AN_time is ship_eta_PE + AN_time_From_PE.
 	Print "AN_time " + AN_time.	
 	
 	If (time:seconds + AN_time) < (time:seconds + 240){
 		Set AN_time to time:seconds + AN_time + Ship_Per. //put on next orbit as its too close to calculate in time.
+		Print "AN time too close Shifting Orbit".
 	}
 	Else {
 		Set AN_time to time:seconds + AN_time.
 	}
 	
 	Print "AN_time UT" + AN_time.
-	
 	//Refine the UT using hill climb
-	Hill_Climb["Seek"](AN_time, Hill_Climb["freeze"](0), Hill_Climb["freeze"](0), Hill_Climb["freeze"](0), { 
+	ff_Seek_low(AN_time, ff_freeze(0), ff_freeze(0), ff_freeze(0), { 
 		parameter mnv. 
 		Set AN_time to time:seconds + mnv:ETA.
 		return - vang ((positionat(ship, time:seconds + mnv:eta)-body:position),AN). // want the angle to be zero between the ship radial vector and the AN node.
 		}
 	).
-	Print "Final AN time" + AN_time.
+	Set x to nextnode.
+	Set AN_time to time:seconds + x:ETA.
 	Remove nextnode.
 	wait 0.1.
-	Return (AN_time).
+	If x:ETA < 240{
+		Set AN_time to AN_time + Ship_Per. //put on next orbit as its too close to calculate in time.
+		Print "AN time too close Shifting Orbit".
+	}
+	Print "Final AN time" + AN_time.
+	Return AN_time.
 
 }/// End Function
 
