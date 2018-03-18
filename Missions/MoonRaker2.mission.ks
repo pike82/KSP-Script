@@ -57,10 +57,10 @@ Function Mission_runModes{
 	
 	else if runMode["runMode"] = 2.1 { 
 		Print "Run mode is:" + runMode["runMode"].
-		ff_AdjPlaneInc(0, Minmus).
+		ff_AdjPlaneInc(0, Mun).
 		Wait 10.
-		//ff_BodyTransfer(Mun, 10000, 1000).
-		ff_Hohmann(Minmus).
+		//Minmus
+		ff_Hohmann(Mun, 25000).
 		Wait 10.
 		gf_set_runmode("runMode",3.1).
 	}	
@@ -72,15 +72,23 @@ Function Mission_runModes{
 		Until time:seconds - 300 > nexttime{
 			Wait 10.
 		}
-		ff_Circ("Per").
-		Wait 10.
-		gf_set_runmode("runMode",4.1).
+		gf_set_runmode("runMode",3.2).
 	}	
 	
+	else if runMode["runMode"] = 3.2 { 
+		Print "Run mode is:" + runMode["runMode"].
+		ff_Circ("Per").
+		Wait 10.
+		gf_set_runmode("runMode",3.3).
+	}	
+	else if runMode["runMode"] = 3.3 { 
+		Print "Run mode is:" + runMode["runMode"].
+		Print "Wating 20,000 seconds to allow science collection".
+		Wait 20000.
+		gf_set_runmode("runMode",4.1).
+	}		
 	else if runMode["runMode"] = 4.1 { 
 		Print "Run mode is:" + runMode["runMode"].
-		ff_user_Node_exec().
-		Wait 10.
 		ff_Hohmann(Kerbin, 30000).
 		Wait 10.
 		gf_set_runmode("runMode",5.1).
@@ -93,7 +101,11 @@ Function Mission_runModes{
 		Until time:seconds - 300 > nexttime{
 			Wait 10.
 		}
-		
+		gf_set_runmode("runMode",5.2).
+	}
+	
+	else if runMode["runMode"] = 5.2 { 
+
 		If ETA:Apoapsis < ETA:periapsis{
 			ff_adjper(30000).
 		}
@@ -114,7 +126,6 @@ Function Mission_runModes{
 		ff_ParaLand().
 		gf_set_runmode("runMode",0).
 	}
-	
 	
 } /// end of function runmodes
 
@@ -184,10 +195,10 @@ Function Rel_Parameters {
 
 //Engines 
 	Lock gl_Grav to ff_Gravity().
-    Lock gl_TWR to MAX( 0.001, MAXTHRUST / (ship:MASS*gl_Grav["G"])). //Provides the current thrust to weight ratio
-	Lock gl_TWRTarget to min( gl_TWR, sv_maxGeeTarget*(9.81/gl_Grav["G"])). // enables the trust to be limited based on the TWR which is dependant on the local gravity compared to normal G forces
+    Lock gl_TWR to MAX( 0.001, Ship:AvailableThrust / (ship:MASS*gl_Grav["G"])). //Provides the current thrust to weight ratio
+	Lock gl_TWRTarget to ((sv_maxGeeTarget*9.81*ship:mass)/max(0.1, Ship:AvailableThrust)). // Provides the throttle fraction, enables the thrust to be limited based on the TWR (earth G only) which is dependant on the local gravity compared to normal G forces
 	Lock gl_TVALMax to min(
-							gl_TWRTarget/gl_TWR, 
+							gl_TWRTarget, 
 							(sv_MaxQLimit / max(0.01,SHIP:Q))^2
 							). //use this to set the Max throttle as the TWR changes with time or the ship reaches max Q for throttleable engines.
 	//Lock Throttle to gl_TVALMax. // this is the command that will need to be used in individual functions when re-setting the throttle after making the throttle zero.

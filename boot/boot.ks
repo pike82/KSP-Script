@@ -99,6 +99,8 @@ If Inbox[1] = vessel(SHIP:Name){ // check for any messages from primary core
 	gf_killthrottle(). // ensures no active throttle unless specified later
 }
 
+Print ADDONS:RT:HASKSCCONNECTION(SHIP).
+
 // Check connection and ensure a mission file is present in the first boot up.
 IF ADDONS:RT:HASKSCCONNECTION(SHIP) or ADDONS:AVAILABLE("RT")=False {  //See if there is a connection
 	Print ("==INITIALISATION FILE CHECKS==").
@@ -139,7 +141,7 @@ until runMode["runMode"] = -1 {
 	//Print ("Run modes in boot loop").
 	If runMode["Runmode"] = 0{
 		Print "Entering Hibernation mode".
-		//Unlock All. //Need to determine if this is a good idea as you will need to reset any locked values
+			Unlock All. //Need to determine if this is a good idea as you will need to reset any locked values
 		Wait 300. //if runmode is zero enter hibernation mode and only check in every 5 minute to conserve power
 	}
     wait 0.001.
@@ -184,9 +186,9 @@ Function gf_checkUpdate {
 			//RUN launcher.ks.
 		 //} //End of Core name if statement
 		//ELSE {
-			IF EXISTS("0:/updateQ/" + newUpdate) {  //If a mission file exisits download and overwirte the current mission file
+			IF EXISTS("0:/updateQ/" + newUpdate + gv_ext) {  //If a mission file exisits download and overwirte the current mission file
 				PRINT "Update Exists, loading update".
-				gf_UPDATEQ("0:/updateQ/", newUpdate, "mission"+ gv_ext).
+				gf_UPDATEQ("0:/updateQ/", newUpdate+ gv_ext, "mission"+ gv_ext).
 				wait 0.2.
 				// Switch to 1.
 				// RUNONCEPATH (mission.ks).
@@ -203,21 +205,21 @@ FUNCTION gf_UPDATEQ {
 PARAMETER filePath, name, newName.
    IF ADDONS:RT:HASKSCCONNECTION(SHIP){
 	   PRINT (filePath+name).
-	   IF EXISTS (filePath+name+ gv_ext) {
-			PRINT ("1:/" + newName+ gv_ext).
-			IF EXISTS("1:/" + newName+ gv_ext) {
-				DELETEPATH ("1:/" + newName+ gv_ext). // allows mission files to be overwritten
+	   IF EXISTS (filePath+name) {
+			PRINT ("1:/" + newName).
+			IF EXISTS("1:/" + newName) {
+				DELETEPATH ("1:/" + newName). // allows mission files to be overwritten
 				Print "Deleting existing file".
 			}
-			COPYPATH (filePath+name, "1:/" + newName+ gv_ext). // creates new file with file name on local volume
-			DELETEPATH (filePath+name+ gv_ext). // Removes file from KSC so it is no longer Q'd
-			RUNPATH (newName+ gv_ext). //Runs new file downloaded
+			COPYPATH (filePath+name, "1:/" + newName). // creates new file with file name on local volume
+			DELETEPATH (filePath+name). // Removes file from KSC so it is no longer Q'd
+			RUNPATH (newName). //Runs new file downloaded
 			Print "Update Completed".
 		} // End of if filepath + name     
 	   ELSE { 
 			Print "Update file not found".
 	   } //End of Else
-	   return ("1:/" + newName+ gv_ext).
+	   return ("1:/" + newName).
    }
 } //End of Function UpdateQ
 

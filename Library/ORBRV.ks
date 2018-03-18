@@ -60,15 +60,17 @@ PARAMETER tgt, t_pe is 100000, trans_bod is Ship:BODY, inc_tgt is 0, int_Warp is
 	LOCAL dvArrive is SQRT(trans_bod:MU/r1) * (1- SQRT((2*r2)/(r1+r2))). // wiki Dv2 Equation
 	Print dvDepart.
 	Print dvArrive.
-	if -dvDepart = dvArrive {
-		set dvArrive to 0. // allows for transfers within the same SOI where the dv arrive and depart are the same.
-	}
-	Print "dvArrive: " + dvArrive.
+	
 	if r2 < r1 { 
 		SET dvDepart TO -dvDepart. // this allows for transfers to a lower orbit
 		SET dvArrive TO -dvArrive.
 	}
 	
+	if -dvDepart = dvArrive {
+		set dvArrive to 0. // allows for transfers within the same SOI where the dv arrive and depart are the same.
+	}
+	Print "dvArrive: " + dvArrive.
+
 	local dv is dvDepart + dvArrive.
 	Print "dv int:" + dv.
 	LOCAL Trans_time is CONSTANT:PI * SQRT( ((r1+r2)^3) / (8 * trans_bod:MU) ). // wiki transfer orbit time Equation
@@ -156,9 +158,8 @@ Function ff_CraftTransfer {
 	}//end if
 	If runMode["ff_CraftTransfer"] = 2{
 		if time:seconds < runMode["ff_CraftTransferBurn"]{
-			//Checks to see if this node has been completed in the first if statement to allow a follow up midc ousrse burn. If so skip this step and just remove the runmodes.
+			//Checks to see if this node has been completed in the first if statement to allow a follow up mid cousrse burn. If so skip this step and just remove the runmodes.
 			hf_TransferRV(target_ves, Target_dist, runMode["ff_CraftTransferBurn"], int_Warp).
-			gf_remove_runmode("ff_CraftTransferBurn").
 			ff_Node_exec(int_Warp).
 		}
 		gf_remove_runmode("ff_CraftTransfer").
@@ -239,14 +240,14 @@ Function hf_Orbit_Phasing {
 parameter target_vessel, Max_orbits.
 
 	Set Tar_Per to target_vessel:orbit:Period.
-	Set Max_time to (Max_orbits * Ship:orbit:Periapsisr). //Gets the time from now until max orbit time
+	Set Max_time to (Max_orbits * Ship:orbit:Period). //Gets the time from now until max orbit time
 	Set Max_Orb_UT to  Max_time + time:seconds. //Get the UT of the max orbits.
-	Set PerLead to (Ship:orbit:Periapsisr - Tar_Per). // Value in seconds of the difference in period times. Negative indicates faster and lower orbit.
+	Set PerLead to (Ship:orbit:Period - Tar_Per). // Value in seconds of the difference in period times. Negative indicates faster and lower orbit.
 	Print "PerLead: " + PerLead.
 	
 	//Need to think of logic relating to per lead being positive vs negative. Positve the orbit diff needs to be 360 - orbdiff becasue it needs to take the long way around.
 	
-	Set Orbits_Phasing to Ship:orbit:Periapsisr/PerLead. // The number of orbits required between phasings negative indicates faster and lower orbit
+	Set Orbits_Phasing to Ship:orbit:Period/PerLead. // The number of orbits required between phasings negative indicates faster and lower orbit
 	Print "Orbits_Phasing" + Orbits_Phasing.
 	Set minOrbits_Phasing to  Orbits_Phasing/Max_orbits.
 	Set tgt_perEta to max(0,ETA:PERIAPSIS).
@@ -270,7 +271,7 @@ parameter target_vessel, Max_orbits.
 	Print "ShipPeLng Post: " + ShipPeLng.
 		
 	// Work out the angle required to be covered
-	
+	Print "PerLead: " + PerLead.
 	If PerLead > 0 { // Target aproaching ship from behind
 		if ShipPeLng > tgt_PeLng{
 			Set longDiff to ShipPeLng - tgt_PeLng.		
@@ -290,7 +291,7 @@ parameter target_vessel, Max_orbits.
 	}		
 	Print "longDiff: " + longDiff.
 	
-	Set LongDiffTime to (longDiff/360)*Ship:orbit:Periapsisr. //Time difference between longitudes
+	Set LongDiffTime to (longDiff/360)*Ship:orbit:Period. //Time difference between longitudes
 	Print "LongDiffTime: " + LongDiffTime.
 	Set tgtShiptPeTime to tgt_perEta - LongDiffTime. //Time for the target to be over the ship PE (approx)
 	Print "tgtShiptPeTime: " + tgtShiptPeTime.
@@ -348,7 +349,7 @@ Local atm_Height is 0.
 			Set Starting_time to time:seconds +ETA:PERIAPSIS.
 	}// end if
 	Else{
-		Set Starting_time to time:seconds + ETA:PERIAPSIS + Ship:orbit:Periapsisr.
+		Set Starting_time to time:seconds + ETA:PERIAPSIS + Ship:orbit:Period.
 	} // end else
 	Print "Starting Time:" + Starting_time. 
 	Print "Max Time:" + Max_Orb_UT.
@@ -361,10 +362,10 @@ Local atm_Height is 0.
 	Print "Intercept not possible, Orbit too big, decreasing Apoapsis at Periapsis".
 		if orbCatchup > Max_orbits{
 			Print "Decreasing Periapsis from Apoapsis as orbits too similar to make intercept in max orbits".
-			OrbMnvs["adjper"](Ap_Tar-target_distance, 50, true). //reduces periapsis to be lower that the target crafts Apoapsis - the target distance to ensure inside the Apoapsis
+			ff_adjPer(Ap_Tar-target_distance, 50, true). //reduces periapsis to be lower that the target crafts Apoapsis - the target distance to ensure inside the Apoapsis
 			Set Starting_time to time:seconds + ETA:PERIAPSIS. // need to recalculate the starting time based on the new orbit (we know we are at the apoapsis so enough time before the periapsis).
 		}
-		Wait 10.0. //debugging
+		//Wait 10.0. //debugging
 		Set result to hf_find_intersect (target_vessel, Starting_time, Target_distance, Max_Orb_UT, atm_Height, "Big").	//end find intersect
 	}//End If
 	
@@ -376,14 +377,15 @@ Local atm_Height is 0.
 			ff_adjApo(Pe_Tar+target_distance, 50, true). //increases apoapsis to be higher than the target crafts periapsis - the target distance to ensure inside the Apoapsis
 			Set Starting_time to time:seconds + ETA:PERIAPSIS. // need to recalculate the starting time based on the new orbit (we know we are at the apoapsis so enough time before the periapsis).
 		}
-		Wait 10.0. //debugging
+		//Wait 10.0. //debugging
 		Set result to hf_find_intersect (target_vessel, Starting_time, Target_distance, Max_Orb_UT, atm_Height, "Small").	//end find intersect
 	}//End ELSE IF
 	
 	Else IF ((Ship:orbit:Apoapsis > Ap_Tar) and (Ship:orbit:Periapsis < Pe_Tar)) or ((Ship:orbit:Apoapsis < Ap_Tar) and (Ship:orbit:Periapsis > Pe_Tar)){
 		Print "Orbits Cross".
 		if orbCatchup > Max_orbits{
-		 	Set PerReq to Ship:orbit:Periapsisr + (ShipTgtDiffTime/(Max_orbits-2)). //minus two as there can be upto one orbit of manevers before and then an additional one for security as it better to allow for a higher orbit in finding a solution.
+		Print "Cannot lower orbit to meet, raising apoapsis too allow possible intercept".
+		 	Set PerReq to Ship:orbit:Period + (ShipTgtDiffTime/(Max_orbits-2)). //minus two as there can be upto one orbit of manevers before and then an additional one for security as it better to allow for a higher orbit in finding a solution.
 			Print "PerReq: " + PerReq.
 			Set SMAReq to  ((body:mu * (PerReq^2))/(4*(Constant:pi^2)))^(1/3).     //a = cuberoot((mu *t^2)/4*pi^2)
 			Print "SMAReq: " + SMAReq.
@@ -392,7 +394,7 @@ Local atm_Height is 0.
 			ff_adjapo(ApReq, 50, true).
 			Set Starting_time to time:seconds + ETA:PERIAPSIS. // need to recalculate the starting time based on the new orbit (we know we have just passed the periapsis).
 		}
-		Wait 10.0. //debugging
+		//Wait 10.0. //debugging
 		Set result to hf_find_intersect (target_vessel, Starting_time, Target_distance, Max_Orb_UT, atm_Height).	//end find intersect
 	}//End Else If
 	
@@ -400,7 +402,7 @@ Local atm_Height is 0.
 	//Orbits could cross with the correct orientation. The Hill climb function can be used to make the orientation correct. Lookinto if there is a specific time in the orbit which will make this be more efficent.
 		Print "Orbits Cross if Orientation OK".
 		//TODO put in a way to determine the orientation.
-		Wait 10.0. //debugging
+		//Wait 10.0. //debugging
 		Set result to hf_find_intersect (target_vessel, Starting_time, Target_distance, Max_Orb_UT, atm_Height).	//end find intersect
 	}//End Else
 
@@ -497,7 +499,7 @@ parameter target_body, Start_time, EndTime, StepSize, Target_distance is 1500.
 Set WinSep to 2^64.
 Set WinTime to 0.
 	FROM {local y is Start_time.} 
-	UNTIL y > EndTime // Loop untill at max time
+	UNTIL y > EndTime // Loop until at max time
 	STEP {set y to y+StepSize.} // 
 	DO{
 		If (abs(hf_separation_at(target_body, y) - Target_distance) < abs(WinSep - Target_distance)) {

@@ -4,52 +4,28 @@ Print "Old Config:IPU Setting:" + Config:IPU.
 Set Config:IPU to 1000.// this needs to be set based on the maximum number of processes happening at once, usually 500 is enought unless its going to be a very heavy script such as a suicide landing script which may require upto 1500
 Print "New Config:IPU Setting:" + Config:IPU.
 Set Config:Stat to false.
-	
-LIST PROCESSORS IN ALL_PROCESSORS.
 
-Set CORE:Part:Tag To SHIP:NAME.
-
-for Processor in ALL_PROCESSORS {
-	Print Processor:Tag.
-	If Processor:Tag:CONTAINS("Stage"){
-		SET MESSAGE TO Processor:Tag. // can be any serializable value or a primitive
-		SET P TO PROCESSOR(Processor:Tag).
-		IF P:CONNECTION:SENDMESSAGE(MESSAGE) {
-			PRINT "Message sent to Inbox Stack!".
-		}
-		//Processor:Deactivate.
-		Print Processor:Tag + " Files moved".
-		copypath("0:/Launchers/" + Processor:Tag +".ks",Processor:Tag + ":/Boot.ks").
-		copypath("0:/Library/knu.ks",Processor:Tag + ":/").
-		set processor:bootfilename to "Boot.ks". // sets the bootfile so when activated this file will run
-		Processor:Activate.
-		WAIT UNTIL NOT CORE:MESSAGES:EMPTY. // If the processor activates properly it will pick up the message sent before deactivation and send a reponse everything is working
-		SET RECEIVED TO CORE:MESSAGES:POP.
-		IF RECEIVED:CONTENT = Processor:Tag + " Rcvd" {
-			PRINT Processor:Tag + "Started".
-		} ELSE {
-		  PRINT "Unexpected message: " + RECEIVED:CONTENT.
-		}
-	}
-}.		
- wait 0.5. // ensure above mesage process has finished	
- 
- //TODO: Look at implimenting a Flight readout script like the KOS-Stuff_master gravity file for possible implimentation.
 intParameters().
 
 PRINT ("Downloading libraries").
 //download dependant libraries first
 
 FOR file IN LIST(
-	"Util_Launch"+ gv_ext,
-	"Launch_atm"+ gv_ext,
-	"OrbMnvs"+ gv_ext,
-	"Util_Vessel"+ gv_ext){ 
-		RUNPATH(gf_DOWNLOAD("0:/Library/",file,file)).
-	}
-
-Rel_Parameters(). 	
-
+	"Util_Launch",
+	"Launch_atm",
+	"OrbMnvs",
+	"orbRV",
+	"OrbMnvNode",
+	"Landing_atm",
+	"Util_Vessel"){ 
+		//Method for if to download or download again.
+		IF (not EXISTS ("1:/" + file)) or (not runMode["runMode"] = 0.1)  { //Want to ignore existing files within the first runmode.
+			gf_DOWNLOAD("0:/Library/",file,file).
+			wait 0.001.	
+		}
+		RUNPATH(file).
+	} 
+Rel_Parameters().
 
 Function Mission_runModes{
 		
@@ -140,10 +116,11 @@ Function Rel_Parameters {
 
 //Engines 
 	Lock gl_Grav to ff_Gravity().
-    Lock gl_TWR to MAX( 0.001, MAXTHRUST / (ship:MASS*gl_Grav["G"])). //Provides the current thrust to weight ratio
-	Lock gl_TWRTarget to min( gl_TWR, sv_maxGeeTarget*(9.81/gl_Grav["G"])). // enables the trust to be limited based on the TWR which is dependant on the local gravity compared to normal G forces
+    Lock gl_TWR to MAX( 0.001, Ship:AvailableThrust / (ship:MASS*gl_Grav["G"])). //Provides the current thrust to weight ratio
+	Lock gl_TWRTarget to min( gl_TWR, 
+								(sv_maxGeeTarget*(9.81/gl_Grav["G"])*ship:mass)/Ship:AvailableThrust). // Provides the throttle fraction, enables the thrust to be limited based on the TWR which is dependant on the local gravity compared to normal G forces
 	Lock gl_TVALMax to min(
-							gl_TWRTarget/gl_TWR, 
+							gl_TWRTarget, 
 							(sv_MaxQLimit / max(0.01,SHIP:Q))^2
 							). //use this to set the Max throttle as the TWR changes with time or the ship reaches max Q for throttleable engines.
 	//Lock Throttle to gl_TVALMax. // this is the command that will need to be used in individual functions when re-setting the throttle after making the throttle zero.

@@ -41,8 +41,12 @@ parameter autowarp is 0, Alrm is True, n is nextnode, v is n:burnvector, startti
 		}
 	}
 	gf_set_runmode("ff_Node_exec",1).
-
-	Print "locking Steering".
+	Lock Steering to Ship:Prograde + R(90,0,0). 
+	until time:seconds > starttime - 180 {
+		wait 10.
+	}
+	
+	Print "locking Steering to burn vector".
 	lock steering to n:burnvector.
 	// Set TVAL to 0.0.
 	// Lock Throttle to TVAL.

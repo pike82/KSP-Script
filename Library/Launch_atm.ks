@@ -44,7 +44,6 @@ Function ff_preLaunch {
 	Wait 1. //Alow Variables to be set and Stabilise pre launch
 	PRINT "Prelaunch.".
 	Lock Throttle to gl_TVALMax().
-	
 	Print "Current Stage:" + STAGE:NUMBER.
 	LOCK STEERING TO HEADING(90, 90). //this is locked 90,90 only until the clamps are relased
 
@@ -67,7 +66,10 @@ Function ff_liftoff{
 	STAGE. //Ignite main engines
 	Set EngineStartTime to TIME:SECONDS.
 	PRINT "Engines started.".
-	
+	Print Ship:AvailableThrust. 
+	Print ship:MASS.
+	Print gl_Grav["G"].
+	Print "Throttle setting: " + gl_TWR+ ", "+gl_TWRTarget+", "+gl_TVALMax.
 	Set MaxEngineThrust to 0. 
 	LIST ENGINES IN engList. //Get List of Engines in the vessel
 	FOR eng IN engList {  //Loops through Engines in the Vessel

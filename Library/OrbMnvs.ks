@@ -151,7 +151,7 @@ FOR file IN LIST(
 			}
 			Else{
 			// use the following in the future to also conduct a change of inclination at the same time
-				ff_Seek_low(Hill_Climb["freeze"](time:seconds + ETA:PERIAPSIS), ff_freeze(0), 0, Edv, 
+				ff_Seek_low(ff_freeze(time:seconds + ETA:PERIAPSIS), ff_freeze(0), 0, Edv, 
 					{ 	parameter mnv. 
 						if ff_tol(mnv:orbit:apoapsis, Target_Apoapsis , Target_Tolerance) return 0. 
 						return -(abs(Target_Apoapsis-mnv:orbit:Apoapsis) / Target_Apoapsis)- (abs(IncTar-mnv:orbit:inclination)/2). 
@@ -202,7 +202,7 @@ FOR file IN LIST(
 		Else {
 			Print "Adusting inc".
 			ff_Seek_low(
-				Hill_Climb["freeze"](time:seconds + ETA:APOAPSIS), ff_freeze(0), 0, ff_freeze(0), { parameter mnv. return -abs(mnv:orbit:inclination - Target_Inc). }
+				ff_freeze(time:seconds + ETA:APOAPSIS), ff_freeze(0), 0, ff_freeze(0), { parameter mnv. return -abs(mnv:orbit:inclination - Target_Inc). }
 			).
 			ff_Node_exec(int_Warp).
 		} //end else
@@ -220,7 +220,7 @@ FOR file IN LIST(
 			Print "Adusting inc plane".
 			Local UT is ff_Find_AN_UT(target_Body).
 		
-			Wait 10.
+			Wait 1.
 			ff_Seek_low(
 				ff_freeze(UT), 0, 0, 0, { 
 					parameter mnv. 				
@@ -240,7 +240,7 @@ FOR file IN LIST(
 				}
 				, True
 			).
-			wait 10.
+			wait 1.
 			
 			Print "tgt LAN " + target_Body:orbit:LAN.
 			Print "Ship LAN " + Ship:orbit:LAN.
@@ -248,13 +248,14 @@ FOR file IN LIST(
 			Print mod(720 + target_Body:orbit:LAN + Ship:orbit:LAN,360).
 			If mod(720 + target_Body:orbit:LAN + Ship:orbit:LAN,360) < 90 or mod(720 + target_Body:orbit:LAN + Ship:orbit:LAN,360) > 270{
 				local oldnode is nextnode.
-				local newnode is node(time:seconds + oldnode:ETA, oldnode:RADIALOUT, oldnode:NORMAL, -oldnode:PROGRADE).
+				local newnode is node(time:seconds + oldnode:ETA, oldnode:RADIALOUT, -oldnode:NORMAL, oldnode:PROGRADE).
+				Print oldnode:NORMAL.
 				Remove nextnode.
 				Add newnode.
 				Print "Normal Burn inversed".
 			}
 			
-			wait 10.
+			wait 1.
 			ff_Node_exec(int_Warp).
 		} //end else
 	}	/// End Function

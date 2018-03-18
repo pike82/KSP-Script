@@ -221,10 +221,11 @@ Function Rel_Parameters {
 
 //Engines 
 	Lock gl_Grav to ff_Gravity().
-    Lock gl_TWR to MAX( 0.001, MAXTHRUST / (ship:MASS*gl_Grav["G"])). //Provides the current thrust to weight ratio
-	Lock gl_TWRTarget to min( gl_TWR, sv_maxGeeTarget*(9.81/gl_Grav["G"])). // enables the trust to be limited based on the TWR which is dependant on the local gravity compared to normal G forces
+    Lock gl_TWR to MAX( 0.001, Ship:AvailableThrust / (ship:MASS*gl_Grav["G"])). //Provides the current thrust to weight ratio
+	Lock gl_TWRTarget to min( gl_TWR, 
+								(sv_maxGeeTarget*(9.81/gl_Grav["G"])*ship:mass)/Ship:AvailableThrust). // Provides the throttle fraction, enables the thrust to be limited based on the TWR which is dependant on the local gravity compared to normal G forces
 	Lock gl_TVALMax to min(
-							gl_TWRTarget/gl_TWR, 
+							gl_TWRTarget, 
 							(sv_MaxQLimit / max(0.01,SHIP:Q))^2
 							). //use this to set the Max throttle as the TWR changes with time or the ship reaches max Q for throttleable engines.
 	//Lock Throttle to gl_TVALMax. // this is the command that will need to be used in individual functions when re-setting the throttle after making the throttle zero.
