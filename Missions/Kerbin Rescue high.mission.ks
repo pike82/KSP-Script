@@ -46,7 +46,7 @@ Function Mission_runModes{
 	else if runMode["runMode"] = 1.1 { 
 		Print "Run mode is:" + runMode["runMode"].
 		ff_liftoffclimb() .
-		ff_GravityTurnAoA(-3.5,"RCS",1.0, 0.005, 0.15, 0.45, 0.4).
+		ff_GravityTurnAoA(-4.5,"Boost",1.0, 0.005, 0.15, 0.45, 0.4).
 		ff_Coast().
 		Print "Free CPU Space: " + core:currentvolume:FreeSpace.
 		ff_Circ("apo").
@@ -60,7 +60,14 @@ Function Mission_runModes{
 	
 	else if runMode["runMode"] = 2.1 { 
 		Print "Run mode is:" + runMode["runMode"].
-		ff_CraftTransfer(ResTar,300,10).
+		ff_CraftTransfer(ResTar,300,5).
+		Wait 1.
+		gf_set_runmode("runMode",2.2).
+	}	
+	
+	else if runMode["runMode"] = 2.2 { 
+		Print "Run mode is:" + runMode["runMode"].
+		ff_CraftTransfer(ResTar,300,1).
 		Wait 1.
 		gf_set_runmode("runMode",3.1).
 	}	
@@ -116,9 +123,9 @@ Function intParameters {
 	//Ship Variable Inital Launch Parameters
 	///////////////////////
  	Global sv_targetInclination to ResTar:orbit:inclination. //Desired Inclination
-    Global sv_targetAltitude to 5500000. //Desired Orbit Altitude from Sea Level
+    Global sv_targetAltitude to 3500000. //Desired Orbit Altitude from Sea Level
     Global sv_ClearanceHeight to 200. //Intital Climb to Clear the Tower and start Pitchover Maneuver
-    Global sv_anglePitchover to 85. //Final Pitchover angle
+    Global sv_anglePitchover to 75. //Final Pitchover angle
 	Global sv_landingtargetLATLNG to latlng(-0.0972092543643722, -74.557706433623). // This is for KSC but use target:geoposition if there is a specific target vessel on the surface that can be used.
 	Global sv_prevMaxThrust to 0. //used to set up for the flameout function
 	
